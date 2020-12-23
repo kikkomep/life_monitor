@@ -379,6 +379,7 @@ class Workflow(db.Model):
 
     @property
     def previous_workflow_versions(self):
+        # TODO: reimplement with a direct query on the workflow table
         return {k: v
                 for k, v in self.workflow_registry.get_workflow_versions(self.uuid).items()
                 if k != self.version}
