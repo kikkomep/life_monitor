@@ -252,7 +252,6 @@ def create_authorization_code_flow_client(_admin_user):
                                   _fake_callback_uri(), "client_secret_post")
     logger.debug("Registered client: %r", client)
     return client
-    # client.delete()
 
 
 def create_authorization_code_access_token(_application,
