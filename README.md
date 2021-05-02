@@ -50,6 +50,15 @@ guide](https://crs4.github.io/life_monitor/lm_admin_guide).
 
 Life Monitor is being developed as part of the [EOSC-Life project](https://www.eosc-life.eu/).
 
-<img alt="EOSC-Life Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_EOSC-Life.png" width="100" />
-<img alt="CRS4 Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_crs4-transparent.png" width="100" />
-<img alt="BBMRI-ERIC Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_bbmri-eric.png" width="100" />
+<div style="text-align: center">
+     <div style="display: inline-block; vertical-align: top;">
+          <img alt="CRS4 Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_crs4-transparent.png" height="50px" style="vertical-align:middle;"/>
+     </div>
+     <div style="display: inline-block; vertical-align: middle;">
+          <img alt="EOSC-Life Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_EOSC-Life.png" height="100px"
+               style="vertical-align:middle; position: relative; top: 50px;"/>
+     </div>
+     <div style="display: inline-block; vertical-align: top;">
+          <img alt="BBMRI-ERIC Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_bbmri-eric.png"  height="50px" style="vertical-align:middle;"/>
+     </div>
+</div>
