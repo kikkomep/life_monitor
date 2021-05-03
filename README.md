@@ -53,11 +53,11 @@ Life Monitor is being developed as part of the [EOSC-Life project](https://www.e
 
 <p align="center">
 <img alt="CRS4 Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_crs4-transparent.png" 
-     height="50px" style="vertical-align:middle; width: 25%;"/>
+     height="50px" style="width: 25%;"/>
 
 <img alt="EOSC-Life Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_EOSC-Life.png" 
-     height="100px" style="vertical-align:middle; width: 25%;"/>
+     height="100px" style="width: 25%;"/>
           
 <img alt="BBMRI-ERIC Logo" src="https://github.com/crs4/life_monitor/raw/master/docs/logo_bbmri-eric.png"  
-     height="50px" style="vertical-align:middle; width: 25%"/>
+     height="50px" style="width: 25%"/>
 </p>
