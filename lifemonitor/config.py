@@ -20,6 +20,7 @@
 
 import logging
 import os
+from logging.config import dictConfig
 from typing import List, Type
 
 import dotenv
@@ -150,35 +151,43 @@ def configure_logging(app):
         level_value = logging.INFO
         error = True
 
-    # dictConfig({
-    #     'version': 1,
-    #     'formatters': {'default': {
-    #         'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-    #     }},
-    #     'handlers': {'wsgi': {
-    #         'class': 'logging.StreamHandler',
-    #         'stream': 'ext://flask.logging.wsgi_errors_stream',
-    #         'formatter': 'default'
-    #     }},
-    #     'response': {
-    #         'level': 'INFO',
-    #         'handlers': ['wsgi'],
-    #     },
-    #     'root': {
-    #         'level': level_value,
-    #         'handlers': ['wsgi']
-    #     },
-    #     # Lower the log level for the github.Requester object -- else it'll flood us with messages
-    #     'Requester': {
-    #         'level': logging.ERROR,
-    #         'handlers': ['wsgi']
-    #     },
-    # })
+    dictConfig({
+        'version': 1,
+        'formatters': {'default': {
+            'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+        }},
+        'handlers': {'wsgi': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://flask.logging.wsgi_errors_stream',
+            'formatter': 'default'
+        }},
+        'response': {
+            'level': logging.INFO,
+            'handlers': ['wsgi'],
+        },
+        'root': {
+            'level': level_value,
+            'handlers': ['wsgi']
+        },
+        # Lower the log level for the github.Requester object -- else it'll flood us with messages
+        'Requester': {
+            'level': logging.ERROR,
+            'handlers': ['wsgi']
+        },
+        'disable_existing_loggers': False,
+    })
     # Remove Flask's default handler
     # (https://flask.palletsprojects.com/en/2.0.x/logging/#removing-the-default-handler)
-    # from flask.logging import default_handler
-    # app.logger.removeHandler(default_handler)
-    logging.basicConfig(level=level_value)
+    from flask.logging import default_handler
+    app.logger.removeHandler(default_handler)
+    # Raise the level of the default flask request logger (actually, it's the one defined by werkzeug)
+    try:
+        from werkzeug._internal import _log as werkzeug_log
+        werkzeug_log("info", "Raising werkzeug logging level to ERROR")
+        from werkzeug._internal import _logger as werkzeug_logger
+        werkzeug_logger.setLevel(logging.ERROR)
+    except ImportError:
+        app.logger.warning("Unable to access werkzeug logger to raise it logging level")
 
     if error:
         app.logger.error("LOG_LEVEL value %s is invalid. Defaulting to INFO", level_str)
