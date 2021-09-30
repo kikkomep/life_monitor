@@ -26,7 +26,6 @@ from typing import List, Type
 import dotenv
 
 from .db import db_uri
-from .utils import bool_from_string
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -71,7 +70,7 @@ class BaseConfig:
     OAUTH2_REFRESH_TOKEN_BEFORE_EXPIRATION = 5 * 60
     # JWT Settings
     JWT_SECRET_KEY_PATH = os.getenv("JWT_SECRET_KEY_PATH", 'certs/jwt-key')
-    JWT_EXPIRATION_TIME = os.getenv("JWT_EXPIRATION_TIME", 3600)
+    JWT_EXPIRATION_TIME = int(os.getenv("JWT_EXPIRATION_TIME", "3600"))
     # Default Cache Settings
     CACHE_TYPE = "flask_caching.backends.simplecache.SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 60
