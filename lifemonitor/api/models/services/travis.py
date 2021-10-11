@@ -188,7 +188,6 @@ class TravisTestingService(TestingService):
     def _disable_build_cache(func, obj: TravisTestingService,
                              test_instance: models.TestInstance, build_number: int,
                              *args, **kwargs):
-        logger.debug("Params: %r - %r", kwargs)
         build = obj._get_test_build(test_instance, build_number)
         return build.is_running()
         # return True
