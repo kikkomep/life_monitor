@@ -46,13 +46,6 @@ def test_workflow_resource() -> str:
 
 
 @pytest.fixture
-def test_instance(test_workflow_resource):
-    instance = MagicMock()
-    instance.resource = test_workflow_resource
-    return instance
-
-
-@pytest.fixture
 def github_token() -> Optional[models.TestingServiceToken]:
     token = get_github_token()
     return models.TestingServiceToken('Bearer', token) if token else None
@@ -61,6 +54,17 @@ def github_token() -> Optional[models.TestingServiceToken]:
 @pytest.fixture
 def github_service(api_url: str, github_token: models.TestingServiceToken) -> models.GithubTestingService:
     return models.GithubTestingService(url=api_url, token=github_token)
+
+
+@pytest.fixture
+def test_instance(test_workflow_resource, github_service):
+    instance = MagicMock()
+    instance.resource = test_workflow_resource
+    last_build = MagicMock()
+    last_build.id = 1234566
+    instance.last_build = last_build
+    instance.testing_service = github_service
+    return instance
 
 
 def test_connection_no_api_url(github_token):
@@ -117,3 +121,20 @@ def test_get_last_builds(github_service: models.GithubTestingService, test_insta
     build = next((b for b in the_builds if not b.is_successful()), None)
     assert build == latest_failed_build or build is None or \
         (build is not None and latest_failed_build is not None and build.id == latest_failed_build.id)
+
+
+def test_build_logs_external_link(github_service: models.GithubTestingService, test_instance):
+    the_builds = github_service.get_test_builds(test_instance, limit=build_query_limit)
+    # latest build
+    last_build = github_service.get_last_test_build(test_instance)
+    assert last_build.id == the_builds[0].id
+    # build links to logs
+    links = github_service.get_test_build_logs_external_link(last_build)
+    assert len(links) == 1, "Unexpected number of links"
+    logger.info(links)
+    repo_full_name = github_service._get_repo(test_instance).full_name
+    logger.info(repo_full_name)
+    assert links[0] == {
+        'job': 'default',
+        'url': f'https://github.com/{repo_full_name}/actions/runs/{last_build.id}/logs'
+    }

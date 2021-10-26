@@ -221,3 +221,20 @@ def test_get_last_logs(travis_service: models.TravisTestingService, test_instanc
         limit_bytes = s[1] if s[1] else (len(output))
         assert len(sout) == limit_bytes - s[0], "Unexpected output length"
         assert output[s[0]:limit_bytes] == sout, "The actual output slice if different from the expected"
+
+
+def test_build_logs_external_link(travis_service: models.TravisTestingService, test_instance):
+    # search the last failed build
+    builds = travis_service.get_test_builds(test_instance, limit=1000)
+    assert len(builds) > 0, "Unexpected number of builds"
+    last_build = builds[-1]
+    logger.debug("The last build: %r", last_build)
+
+    # build links to logs
+    links = travis_service.get_test_build_logs_external_link(last_build)
+    assert len(links) == 2, "Unexpected number of links"
+    logger.info(links)
+    assert links[0] == {
+        'job': '362008063',
+        'url': urllib.parse.urljoin(travis_service.api_base_url, f"job/362008063/log")
+    }

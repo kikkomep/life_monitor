@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 import logging
+import urllib
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import lifemonitor.api.models as models
@@ -153,3 +154,20 @@ def test_get_last_logs(jenkins_service: models.JenkinsTestingService, test_insta
         limit_bytes = s[1] if s[1] else (len(output))
         assert len(sout) == limit_bytes - s[0], "Unexpected output length"
         assert output[s[0]:limit_bytes] == sout, "The actual output slice if different from the expected"
+
+
+def test_build_logs_external_link(jenkins_service: models.JenkinsTestingService, test_instance):
+    # search the last failed build
+    builds = jenkins_service.get_test_builds(test_instance, limit=1000)
+    assert len(builds) > 0, "Unexpected number of builds"
+    last_build = builds[-1]
+    logger.debug("The last build: %r", last_build)
+
+    # build links to logs
+    links = jenkins_service.get_test_build_logs_external_link(last_build)
+    assert len(links) == 1, "Unexpected number of links"
+    logger.info(links)
+    assert links[0] == {
+        'job': 'default',
+        'url': urllib.parse.urljoin(last_build.url, "consoleText")
+    }
