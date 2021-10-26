@@ -176,6 +176,9 @@ class TestingService(db.Model, ModelMixin):
     def get_test_build_external_link(self, test_build: models.TestBuild) -> str:
         raise lm_exceptions.NotImplementedException()
 
+    def get_test_build_logs_external_link(self, test_build: models.TestBuild) -> List:
+        raise lm_exceptions.NotImplementedException()
+
     def get_test_builds(self, test_instance: models.TestInstance, limit: int = 10) -> list:
         raise lm_exceptions.NotImplementedException()
 
