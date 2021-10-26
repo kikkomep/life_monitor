@@ -23,7 +23,7 @@ from __future__ import annotations
 import itertools as it
 import logging
 import re
-from typing import Generator, Optional, Tuple
+from typing import Generator, List, Optional, Tuple
 from urllib.error import URLError
 from urllib.parse import urlparse
 
@@ -211,6 +211,18 @@ class GithubTestingService(TestingService):
     def get_test_build_external_link(self, test_build: models.TestBuild) -> str:
         repo = test_build.test_instance.testing_service._get_repo(test_build.test_instance)
         return f'https://github.com/{repo.full_name}/actions/runs/{test_build.id}'
+
+    def get_test_build_logs_external_link(self, test_build: models.TestBuild) -> List:
+        try:
+            repo = test_build.test_instance.testing_service._get_repo(test_build.test_instance)
+            return [
+                {
+                    'job': 'default',
+                    'url': f'https://github.com/{repo.full_name}/actions/runs/{test_build.id}/logs'
+                }
+            ]
+        except GithubRateLimitExceededException as e:
+            raise lm_exceptions.RateLimitExceededException(detail=str(e), instance=test_instance)
 
     @classmethod
     def _parse_workflow_url(cls, resource: str) -> Tuple[str, str, str]:
