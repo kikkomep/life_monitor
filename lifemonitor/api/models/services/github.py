@@ -222,7 +222,7 @@ class GithubTestingService(TestingService):
                 }
             ]
         except GithubRateLimitExceededException as e:
-            raise lm_exceptions.RateLimitExceededException(detail=str(e), instance=test_instance)
+            raise lm_exceptions.RateLimitExceededException(detail=str(e), instance=test_build)
 
     @classmethod
     def _parse_workflow_url(cls, resource: str) -> Tuple[str, str, str]:
