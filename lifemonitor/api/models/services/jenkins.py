@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import re
 import urllib
-from typing import Optional
+from typing import List, Optional
 
 import lifemonitor.api.models as models
 import lifemonitor.exceptions as lm_exceptions
@@ -155,6 +155,15 @@ class JenkinsTestingService(TestingService):
     @cache.memoize()
     def get_test_build_external_link(self, test_build: models.TestBuild) -> str:
         return urllib.parse.urljoin(test_build.url, "console")
+
+    @cache.memoize()
+    def get_test_build_logs_external_link(self, test_build: models.TestBuild) -> List:
+        return [
+            {
+                'job': 'default',
+                'url': urllib.parse.urljoin(test_build.url, "consoleText")
+            }
+        ]
 
     def get_test_build_output(self, test_instance: models.TestInstance, build_number, offset_bytes=0, limit_bytes=131072):
         try:
