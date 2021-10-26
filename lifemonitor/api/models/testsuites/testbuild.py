@@ -107,8 +107,9 @@ class TestBuild(ABC):
         pass
 
     @property
-    @abstractmethod
     def external_link(self) -> str:
+        return self.testing_service.get_test_build_external_link(self)
+
     @property
     def external_output_link(self) -> List:
         return self.testing_service.get_test_build_logs_external_link(self)
