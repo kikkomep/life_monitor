@@ -24,7 +24,7 @@ import datetime
 import logging
 import re
 import urllib
-from typing import Optional
+from typing import List, Optional
 
 import lifemonitor.api.models as models
 import requests
@@ -200,6 +200,42 @@ class TravisTestingService(TestingService):
         testing_service = test_build.test_instance.testing_service
         repo_slug = testing_service.get_repo_slug(test_build.test_instance)
         return urllib.parse.urljoin(testing_service.base_url, f'{repo_slug}/builds/{test_build.id}')
+
+    @cache.memoize()
+    def get_test_build_logs_external_link(self, test_build: models.TestBuild) -> List:
+        result = []
+        build_number = test_build.id
+        test_instance = test_build.test_instance
+        try:
+            _metadata = self._get(f"/build/{build_number}/jobs")
+
+            if isinstance(_metadata, requests.Response):
+                if _metadata.status_code == 404:
+                    raise EntityNotFoundException(models.TestBuild, entity_id=build_number)
+                else:
+                    raise TestingServiceException(status=_metadata.status_code,
+                                                  detail=str(_metadata.content))
+            logger.debug("Number of jobs (test_instance '%r', build_number '%r'): %r",
+                         test_instance.name, build_number, len(_metadata['jobs']))
+            if 'jobs' not in _metadata or len(_metadata['jobs']) == 0:
+                logger.debug("Ops... no job found")
+            else:
+                current_job_index = 0
+                while current_job_index < len(_metadata['jobs']):
+                    job_id = _metadata['jobs'][current_job_index]['id']
+                    url = self._build_url("/job/{}/log".format(job_id))
+                    logger.debug("URL: %r", url)
+                    result.append({
+                        'job': str(job_id),
+                        'url': url
+                    })
+                    current_job_index += 1
+
+        except Exception as e:
+            logger.exception(e)
+            raise TestingServiceException(details=f"{e}")
+
+        return result
 
     def get_test_build_output(self, test_instance: models.TestInstance, build_number, offset_bytes=0, limit_bytes=131072):
         try:
