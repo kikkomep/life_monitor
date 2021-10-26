@@ -234,7 +234,8 @@ def test_build_logs_external_link(travis_service: models.TravisTestingService, t
     links = travis_service.get_test_build_logs_external_link(last_build)
     assert len(links) == 2, "Unexpected number of links"
     logger.info(links)
+    job_id = '362008063'
     assert links[0] == {
-        'job': '362008063',
-        'url': urllib.parse.urljoin(travis_service.api_base_url, f"job/362008063/log")
+        'job': job_id,
+        'url': urllib.parse.urljoin(travis_service.api_base_url, f"job/{job_id}/log")
     }
