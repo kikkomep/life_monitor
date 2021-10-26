@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import List
 
 import lifemonitor.api.models as models
 
@@ -108,7 +109,9 @@ class TestBuild(ABC):
     @property
     @abstractmethod
     def external_link(self) -> str:
-        pass
+    @property
+    def external_output_link(self) -> List:
+        return self.testing_service.get_test_build_logs_external_link(self)
 
     def get_output(self, offset_bytes=0, limit_bytes=131072):
         return self.testing_service.get_test_build_output(self.test_instance, self.id, offset_bytes, limit_bytes)
