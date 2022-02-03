@@ -120,20 +120,25 @@ class LifeMonitor:
                 if workflow_registry:
                     for auth in workflow_submitter.get_authorization(workflow_registry):
                         auth.resources.append(w)
-
+        wv = None
         if str(workflow_version) in w.versions:
-            raise lm_exceptions.WorkflowVersionConflictException(workflow_uuid, workflow_version)
+            wv = w.versions[workflow_version]
+            if w.versions[workflow_version].submitter == workflow_submitter:
+                raise lm_exceptions.WorkflowVersionConflictException(workflow_uuid, workflow_version)
         if not roc_link:
             if not workflow_registry:
                 raise ValueError("Missing ROC link")
             else:
                 roc_link = workflow_registry.get_rocrate_external_link(w.external_id, workflow_version)
 
-        wv = w.add_version(workflow_version, roc_link, workflow_submitter,
-                           name=name, hosting_service=workflow_registry)
+        if wv is None:
+            wv = w.add_version(workflow_version, roc_link, workflow_submitter,
+                               name=name, hosting_service=workflow_registry)
 
         if workflow_submitter:
-            wv.permissions.append(Permission(user=workflow_submitter, roles=[RoleType.owner]))
+            wv.permissions.append(Permission(
+                user=workflow_submitter,
+                roles=[RoleType.owner if workflow_submitter == wv.submitter else RoleType.viewer]))
             # automatically register submitter's subscription to workflow events
             workflow_submitter.subscribe(w)
         if authorization:
