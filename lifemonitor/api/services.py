@@ -122,7 +122,15 @@ class LifeMonitor:
                         auth.resources.append(w)
 
         if str(workflow_version) in w.versions:
-            raise lm_exceptions.WorkflowVersionConflictException(workflow_uuid, workflow_version)
+            wv = w.versions[workflow_version]
+            if w.versions[workflow_version].submitter == workflow_submitter:
+                raise lm_exceptions.WorkflowVersionConflictException(workflow_uuid, workflow_version)
+            if workflow_identifier is not None:
+                w = models.Workflow(uuid=w.uuid, identifier=workflow_identifier, name=name)
+                w.permissions.append(Permission(user=workflow_submitter, roles=[RoleType.owner]))
+                if workflow_registry:
+                    for auth in workflow_submitter.get_authorization(workflow_registry):
+                        auth.resources.append(w)
         if not roc_link:
             if not workflow_registry:
                 raise ValueError("Missing ROC link")
