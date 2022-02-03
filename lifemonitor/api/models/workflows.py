@@ -81,7 +81,7 @@ class Workflow(Resource):
 
     def add_version(self, version, uri, submitter: User, uuid=None, name=None,
                     hosting_service: models.WorkflowRegistry = None):
-        if hosting_service:
+        if hosting_service and uuid is None and self.uuid is None:
             if self.external_id and hasattr(hosting_service, 'get_external_uuid'):
                 try:
                     self.uuid = hosting_service.get_external_uuid(self.external_id, version, submitter)
