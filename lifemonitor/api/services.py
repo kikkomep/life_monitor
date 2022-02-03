@@ -173,10 +173,17 @@ class LifeMonitor:
         logger.debug("WorkflowVersion to delete: %r", workflow)
         if not workflow:
             raise lm_exceptions.EntityNotFoundException(models.WorkflowVersion, (workflow_uuid, workflow_version))
-        if workflow.submitter != user:
-            raise lm_exceptions.NotAuthorizedException("Only the workflow submitter can delete the workflow")
-        workflow.delete()
-        logger.debug("Deleted workflow wf_uuid: %r - version: %r", workflow_uuid, workflow_version)
+        # if workflow.submitter != user:
+        #     raise lm_exceptions.NotAuthorizedException("Only the workflow submitter can delete the workflow")
+        user.unsubscribe(workflow.workflow)
+        logger.debug("Check number of subscriptions: %r", workflow.workflow.subscriptions)
+        if(len(workflow.workflow.subscriptions) == 0 and not workflow.workflow.public):
+            logger.debug("Private workflow without subscriptions will be deleted")
+            logger.debug("Deleted workflow wf_uuid: %r - version: %r", workflow_uuid, workflow_version)
+            workflow.delete()
+        else:
+            workflow.workflow.save()
+
         return workflow_uuid, workflow_version
 
     @staticmethod
