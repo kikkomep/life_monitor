@@ -167,7 +167,7 @@ def validate_url(url: str) -> bool:
     try:
         result = urllib.parse.urlparse(url)
         return all([result.scheme, result.netloc])
-    except:
+    except Exception:
         return False
 
 
