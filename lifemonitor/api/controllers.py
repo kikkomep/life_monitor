@@ -375,18 +375,6 @@ def workflows_post(body, _registry=None, _submitter_id=None):
         return lm_exceptions.report_problem(400, "Bad Request", extra_info={"missing input": "roc_link OR rocrate"},
                                             detail=messages.input_data_missing)
 
-    temp_rocrate_file = None
-    if encoded_rocrate:
-        try:
-            rocrate = base64.b64decode(encoded_rocrate)
-            temp_rocrate_file = tempfile.NamedTemporaryFile(delete=False, prefix="/tmp/")
-            temp_rocrate_file.write(rocrate)
-            roc_link = f"tmp://{temp_rocrate_file.name}"
-            logger.debug("ROCrate written to %r", temp_rocrate_file.name)
-        except Exception as e:
-            return lm_exceptions.report_problem(400, "Bad Request", extra_info={"exception": str(e)},
-                                                detail=messages.decode_ro_crate_error)
-
     submitter = current_user if current_user and not current_user.is_anonymous else None
     if not submitter:
         try:
@@ -406,7 +394,7 @@ def workflows_post(body, _registry=None, _submitter_id=None):
                                                 .format(submitter_id or current_user.id, registry.name))
     try:
         w = lm.register_workflow(
-            roc_link=roc_link,
+            rocrate_or_link=roc_link or encoded_rocrate,
             workflow_submitter=submitter,
             workflow_version=body['version'],
             workflow_uuid=body.get('uuid', None),
@@ -443,12 +431,6 @@ def workflows_post(body, _registry=None, _submitter_id=None):
     except Exception as e:
         logger.exception(e)
         raise lm_exceptions.LifeMonitorException(title="Internal Error", detail=str(e))
-    finally:
-        if roc_link and roc_link.startswith("tmp://"):
-            try:
-                os.remove(roc_link.replace('tmp://', ''))
-            except Exception as e:
-                logger.error("Error deleting temp rocrate: %r", str(e))
 
 
 @authorized
