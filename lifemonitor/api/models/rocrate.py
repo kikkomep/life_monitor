@@ -20,25 +20,21 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import tempfile
 import uuid as _uuid
 from pathlib import Path
-from typing import List
 
 import lifemonitor.exceptions as lm_exceptions
 from flask import current_app
-from lifemonitor.api.models import db
-from lifemonitor.auth.models import HostingService, Resource, ExternalServiceAuthorizationHeader
+from lifemonitor.api.models import db, repositories
+from lifemonitor.auth.models import (ExternalServiceAuthorizationHeader,
+                                     HostingService, Resource)
+from lifemonitor.config import BaseConfig
 from lifemonitor.models import JSON
-from lifemonitor.test_metadata import get_roc_suites
-from lifemonitor.utils import (check_resource_exists, compare_json,
-                               download_url, extract_zip)
+from lifemonitor.utils import check_resource_exists, download_url
 from sqlalchemy.ext.hybrid import hybrid_property
-
-from rocrate.rocrate import ROCrate as ROCrateHelper
 
 # set module level logger
 logger = logging.getLogger(__name__)
@@ -54,7 +50,7 @@ class ROCrate(Resource):
     _metadata = db.Column("metadata", JSON, nullable=True)
     _local_path = db.Column("local_path", db.String, nullable=True)
     _metadata_loaded = False
-    __roc_helper = None
+    _repository: repositories.WorkflowRepository = None
 
     __mapper_args__ = {
         'polymorphic_identity': 'ro_crate',
@@ -65,7 +61,7 @@ class ROCrate(Resource):
                  version=None, hosting_service=None) -> None:
         super().__init__(uri, uuid=uuid, name=name, version=version)
         self.hosting_service = hosting_service
-        self.__roc_helper = None
+        self._repository: repositories.WorkflowRepository = None
 
     @property
     def local_path(self):
@@ -85,38 +81,48 @@ class ROCrate(Resource):
 
     @hybrid_property
     def crate_metadata(self):
-        if not self._metadata_loaded and not self._metadata:
-            self.load_metadata()
+        if not self._metadata and not self._metadata_loaded:
+            self._metadata = self.load_metadata()
+            self._metadata_loaded = True
         return self._metadata
+
+    def load_metadata(self) -> dict:
+        return self.repository.metadata.to_json()
+
+    @property
+    def repository(self) -> repositories.WorkflowRepository:
+        if not self.uri:
+            raise lm_exceptions.IllegalStateException("URI (roc_link) not set")
+        if not self._repository:
+            # download the RO-Crate if it is not locally stored
+            if not os.path.exists(self.local_path):
+                self.download_from_source(self.local_path)
+            # instantiate a local ROCrate repository
+            self._repository = repositories.ZippedWorkflowRepository(self.local_path)
+        return self._repository
 
     @hybrid_property
     def roc_suites(self):
-        return get_roc_suites(self._roc_helper)
+        return self.repository.metadata.get_roc_suites()
 
     def get_roc_suite(self, roc_suite_identifier):
-        try:
-            return self.roc_suites[roc_suite_identifier]
-        except KeyError:
-            logger.warning("Unable to find the roc_suite with identifier: %r", roc_suite_identifier)
-        return None
+        return self.repository.metadata.get_get_roc_suite(roc_suite_identifier)
+
+    @property
+    def based_on(self) -> str:
+        return self.repository.metadata.isBasedOn
+
+    @property
+    def based_on_link(self) -> str:
+        return self.repository.metadata.isBasedOn
 
     @property
     def dataset_name(self):
-        return self._roc_helper.name
+        return self.repository.metadata.dataset_name
 
     @property
     def main_entity_name(self):
-        mainEntity = self._roc_helper.mainEntity
-        return mainEntity.get("name", mainEntity.id) if mainEntity else None
-
-    @property
-    def _roc_helper(self):
-        if not self.__roc_helper:
-            if not self._metadata_loaded:
-                self.load_metadata()
-        if not self.__roc_helper:
-            raise RuntimeError("ROCrate not correctly loaded")
-        return self.__roc_helper
+        return self.repository.metadata.main_entity_name
 
     def _get_authorizations(self, extra_auth: ExternalServiceAuthorizationHeader = None):
         authorizations = []
@@ -184,44 +190,35 @@ class ROCrate(Resource):
             raise lm_exceptions.DownloadException(detail=f"Not found: {self.uri}", status=410)
 
         errors = []
-        # try either with authorization header and without authorization
-        for authorization in self._get_authorizations():
-            try:
-                auth_header = authorization.as_http_header() if authorization else None
-                logger.debug(auth_header)
-                tmpdir_path = Path(target_path)
-                local_zip = download_url(self.uri,
-                                         target_path=(tmpdir_path / 'rocrate.zip').as_posix(),
-                                         authorization=auth_header)
-                logger.debug("ZIP Archive: %s", local_zip)
-                return (tmpdir_path / 'rocrate.zip').as_posix()
-            except lm_exceptions.NotAuthorizedException as e:
-                logger.info("Caught authorization error exception while downloading and processing RO-crate: %s", e)
-                errors.append(str(e))
+
+        # set target_path
+        if not target_path:
+            target_path = tempfile.mktemp(dir=BaseConfig.BASE_TEMP_FOLDER)
+        try:
+            # try either with authorization header and without authorization
+            for authorization in self._get_authorizations():
+                try:
+                    # FIXME: replace with a better detection mechanism
+                    if self.uri.startswith('https://github.com'):
+                        token = None
+                        if authorization and isinstance(authorization, ExternalServiceAuthorizationHeader):
+                            token = authorization.auth_token
+                        with repositories.RepoCloneContextManager(self.uri, auth_token=token) as tmp_path:
+                            repo = repositories.LocalWorkflowRepository(tmp_path)
+                            repo.write_zip(target_path)
+                            return target_path
+                    else:
+                        auth_header = authorization.as_http_header() if authorization else None
+                        logger.debug(auth_header)
+                        local_zip = download_url(self.uri,
+                                                 target_path=target_path,
+                                                 authorization=auth_header)
+                        logger.debug("ZIP Archive: %s", local_zip)
+                        return target_path
+                except lm_exceptions.NotAuthorizedException as e:
+                    logger.info("Caught authorization error exception while downloading and processing RO-crate: %s", e)
+                    errors.append(str(e))
+        except lm_exceptions.IllegalStateException as e:
+            logger.exception(e)
+            raise lm_exceptions.NotValidROCrateException(detail=e.detail)
         raise lm_exceptions.NotAuthorizedException(detail=f"Not authorized to download {self.uri}", original_errors=errors)
-
-    @classmethod
-    def load_metadata_files(cls, roc_link, target_local_path, authorization_header=None):
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            local_zip = download_url(roc_link,
-                                     target_path=target_local_path,
-                                     authorization=authorization_header)
-
-            logger.debug("ZIP Archive: %s", local_zip)
-            extracted_roc_path = tmpdir_path / 'extracted-rocrate'
-            logger.info("Extracting RO Crate to %s", extracted_roc_path)
-            extract_zip(local_zip, target_path=extracted_roc_path.as_posix())
-
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("RO-crate contents: %s", ', '.join(str(s) for s in extracted_roc_path.iterdir()))
-
-            try:
-                crate = ROCrateHelper(extracted_roc_path.as_posix())
-                metadata_path = extracted_roc_path / crate.metadata.id
-                with open(metadata_path, "rt") as f:
-                    metadata = json.load(f)
-                return crate, metadata
-            except Exception as e:
-                raise lm_exceptions.NotValidROCrateException(detail=str(e))

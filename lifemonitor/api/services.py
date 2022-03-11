@@ -30,7 +30,7 @@ from lifemonitor.api import models
 from lifemonitor.auth.models import (EventType,
                                      ExternalServiceAuthorizationHeader,
                                      Notification, Permission, Resource,
-                                     RoleType, Subscription, User)
+                                     RoleType, Subscription, User, HostingService)
 from lifemonitor.auth.oauth2.client import providers
 from lifemonitor.auth.oauth2.client.models import OAuthIdentity
 from lifemonitor.auth.oauth2.server import server
@@ -99,8 +99,8 @@ class LifeMonitor:
             # if the user is not the submitter
             # and the workflow is associated with a registry
             # then we try to check whether the user is allowed to view the workflow
-            if w.hosting_service is None or \
-                    isinstance(w.hosting_service, models.WorkflowRegistry) and w.workflow not in w.hosting_service.get_user_workflows(user):
+            if w.registry is None or \
+                    isinstance(w.registry, models.WorkflowRegistry) and w.workflow not in w.registry.get_user_workflows(user):
                 raise lm_exceptions.NotAuthorizedException(f"User {user.username} is not allowed to access workflow")
         return w
 
@@ -131,6 +131,8 @@ class LifeMonitor:
 
         try:
             roc_link = get_rocrate_link(rocrate_or_link)
+            wv = w.add_version(workflow_version, roc_link, workflow_submitter,
+                           name=name, registry=workflow_registry)
 
             if not roc_link:
                 if not workflow_registry:
@@ -256,6 +258,26 @@ class LifeMonitor:
         if public is not None:
             w.public = public
 
+
+<< << << < HEAD
+== == == =
+        # set hosting service
+        hosting_service = None
+        if wv.based_on:
+            hosting_service = HostingService.from_url(wv.based_on)
+        elif workflow_registry:
+            hosting_service = workflow_registry
+        if hosting_service:
+            wv.hosting_service = hosting_service
+
+        # parse roc_metadata and register suites and instances
+        try:
+            if wv.roc_suites:
+                for _, raw_suite in wv.roc_suites.items():
+                    cls._init_test_suite_from_json(wv, workflow_submitter, raw_suite)
+        except KeyError as e:
+            raise lm_exceptions.SpecificationNotValidException(f"Missing property: {e}")
+>>>>>> > origin / feature / githubapp - integration
         w.save()
         return wv
 

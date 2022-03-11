@@ -43,6 +43,7 @@ import flask
 import requests
 import yaml
 
+from . import config
 from . import exceptions as lm_exceptions
 
 logger = logging.getLogger()
@@ -243,25 +244,35 @@ def download_url(url: str, target_path: str = None, authorization: str = None) -
             with open(target_path, 'wb') as fd:
                 _download_from_remote(url, fd, authorization)
             logger.info("Fetched %s of data from %s",
-                        sizeof_fmt(os.path.getsize(target_path)),
-                        url)
+                        sizeof_fmt(os.path.getsize(target_path)), url)
     except urllib.error.URLError as e:
-        logger.exception(e)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
         raise \
             lm_exceptions.DownloadException(
                 detail=f"Error downloading from {url}",
                 status=400,
                 original_error=str(e))
     except requests.exceptions.HTTPError as e:
-        logger.exception(e)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
         raise \
             lm_exceptions.DownloadException(
                 detail=f"Error downloading from {url}",
                 status=e.response.status_code,
                 original_error=str(e))
+    except requests.exceptions.ConnectionError as e:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
+        raise \
+            lm_exceptions.DownloadException(
+                detail=f"Unable to establish connection to {url}",
+                status=404,
+                original_error=str(e))
     except IOError as e:
         # requests raised on an exception as we were trying to download.
-        logger.exception(e)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
         raise \
             lm_exceptions.DownloadException(
                 detail=f"Error downloading from {url}",
@@ -275,7 +286,7 @@ def extract_zip(archive_path, target_path=None):
     logger.debug("Target path: %r", target_path)
     try:
         if not target_path:
-            target_path = tempfile.mkdtemp(dir='/tmp')
+            target_path = tempfile.mkdtemp(dir=config.BaseConfig.BASE_TEMP_FOLDER)
         with zipfile.ZipFile(archive_path, "r") as zip_ref:
             zip_ref.extractall(target_path)
         return target_path
@@ -285,21 +296,30 @@ def extract_zip(archive_path, target_path=None):
         raise lm_exceptions.NotValidROCrateException(detail=msg, original_error=str(e))
 
 
-def clone_repo(url: str, branch: str = None, target_path: str = None,
-               remote_url: str = None, remote_branch: str = None,
-               remote_user_token: str = None):
+def _make_git_credentials_callback(token: str = None):
+    return pygit2.RemoteCallbacks(pygit2.UserPass('x-access-token', token)) if token else None
+
+
+def clone_repo(url: str, branch: str = None, target_path: str = None, auth_token: str = None,
+               remote_url: str = None, remote_branch: str = None, remote_user_token: str = None):
     try:
         local_path = target_path
         if not local_path:
-            local_path = tempfile.TemporaryDirectory(dir='/tmp').name
-        user_credentials = None
-        if remote_user_token:
-            user_credentials = pygit2.RemoteCallbacks(pygit2.UserPass('x-access-token', remote_user_token))
-        clone = pygit2.clone_repository(url, local_path, checkout_branch=branch)
+            local_path = tempfile.TemporaryDirectory(dir=config.BaseConfig.BASE_TEMP_FOLDER).name
+        user_credentials = _make_git_credentials_callback(auth_token)
+        clone = pygit2.clone_repository(url, local_path,
+                                        checkout_branch=branch, callbacks=user_credentials)
         if remote_url:
+            user_credentials = _make_git_credentials_callback(remote_user_token)
             remote = clone.create_remote("remote", url=remote_url)
             remote.push([f'+refs/heads/{branch}:refs/heads/{remote_branch}'], callbacks=user_credentials)
         return local_path
+    except pygit2.errors.GitError as e:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
+        if 'authentication' in str(e):
+            raise lm_exceptions.NotAuthorizedException("Token authorization not valid")
+        raise lm_exceptions.DownloadException(detail=str(e))
     finally:
         if target_path is None:
             shutil.rmtree(local_path, ignore_errors=True)

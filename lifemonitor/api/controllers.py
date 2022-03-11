@@ -35,6 +35,7 @@ from lifemonitor.auth.oauth2.client.models import \
     OAuthIdentityNotFoundException
 from lifemonitor.cache import Timeout, cached, clear_cache
 from lifemonitor.lang import messages
+from lifemonitor.config import BaseConfig
 
 # Initialize a reference to the LifeMonitor instance
 lm = LifeMonitor.get_instance()
@@ -443,7 +444,7 @@ def workflows_post(body, _registry=None, _submitter_id=None):
                                             detail=messages.invalid_ro_crate)
     except lm_exceptions.NotValidROCrateException as e:
         return lm_exceptions.report_problem(400, "Bad Request", extra_info={"exception": str(e)},
-                                            detail=messages.invalid_ro_crate)
+                                            detail=f"{messages.invalid_ro_crate}: {e.detail}")
     except lm_exceptions.NotAuthorizedException as e:
         return lm_exceptions.report_problem(403, "Forbidden", extra_info={"exception": str(e)},
                                             detail=messages.not_authorized_registry_access.format(registry.name)
