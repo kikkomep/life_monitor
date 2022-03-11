@@ -25,6 +25,7 @@ import os
 import tempfile
 import uuid as _uuid
 from pathlib import Path
+from typing import List
 
 import lifemonitor.exceptions as lm_exceptions
 from flask import current_app
@@ -33,7 +34,7 @@ from lifemonitor.auth.models import (ExternalServiceAuthorizationHeader,
                                      HostingService, Resource)
 from lifemonitor.config import BaseConfig
 from lifemonitor.models import JSON
-from lifemonitor.utils import check_resource_exists, download_url
+from lifemonitor.utils import check_resource_exists, compare_json, download_url
 from sqlalchemy.ext.hybrid import hybrid_property
 
 # set module level logger
@@ -131,24 +132,6 @@ class ROCrate(Resource):
         authorizations.extend(self.authorizations)
         authorizations.append(None)
         return authorizations
-
-    def load_metadata(self) -> dict:
-        errors = []
-        local_target_path = self.local_path
-
-        # try either with authorization header and without authorization
-        for authorization in self._get_authorizations():
-            try:
-                auth_header = authorization.as_http_header() if authorization else None
-                logger.debug(auth_header)
-                self.__roc_helper, self._metadata = \
-                    self.load_metadata_files(self.uri, local_target_path, authorization_header=auth_header)
-                self._metadata_loaded = True
-                return self._metadata
-            except lm_exceptions.NotAuthorizedException as e:
-                logger.info("Caught authorization error exception while downloading and processing RO-crate: %s", e)
-                errors.append(str(e))
-        raise lm_exceptions.NotAuthorizedException(detail=f"Not authorized to download {self.uri}", original_errors=errors)
 
     def check_for_changes(self, roc_link: str, extra_auth: ExternalServiceAuthorizationHeader = None) -> List:
         errors = []

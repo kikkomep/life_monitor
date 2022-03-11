@@ -132,7 +132,7 @@ class LifeMonitor:
         try:
             roc_link = get_rocrate_link(rocrate_or_link)
             wv = w.add_version(workflow_version, roc_link, workflow_submitter,
-                           name=name, registry=workflow_registry)
+                               name=name, registry=workflow_registry)
 
             if not roc_link:
                 if not workflow_registry:
@@ -162,6 +162,15 @@ class LifeMonitor:
 
             # set workflow visibility
             w.public = public
+
+            # set hosting service
+            hosting_service = None
+            if wv.based_on:
+                hosting_service = HostingService.from_url(wv.based_on)
+            elif workflow_registry:
+                hosting_service = workflow_registry
+            if hosting_service:
+                wv.hosting_service = hosting_service
 
             # parse roc_metadata and register suites and instances
             try:
@@ -258,18 +267,6 @@ class LifeMonitor:
         if public is not None:
             w.public = public
 
-
-<< << << < HEAD
-== == == =
-        # set hosting service
-        hosting_service = None
-        if wv.based_on:
-            hosting_service = HostingService.from_url(wv.based_on)
-        elif workflow_registry:
-            hosting_service = workflow_registry
-        if hosting_service:
-            wv.hosting_service = hosting_service
-
         # parse roc_metadata and register suites and instances
         try:
             if wv.roc_suites:
@@ -277,7 +274,7 @@ class LifeMonitor:
                     cls._init_test_suite_from_json(wv, workflow_submitter, raw_suite)
         except KeyError as e:
             raise lm_exceptions.SpecificationNotValidException(f"Missing property: {e}")
->>>>>> > origin / feature / githubapp - integration
+
         w.save()
         return wv
 
