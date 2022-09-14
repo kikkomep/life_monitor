@@ -82,9 +82,10 @@ def check_last_build():
                             if last_build:
                                 failed = last_build.status == BuildStatus.FAILED
                                 if len(builds) == 1 and failed or \
+                                    len(builds) > 1 and \
                                         builds[0].status in (BuildStatus.FAILED, BuildStatus.PASSED) and \
                                         builds[1].status in (BuildStatus.FAILED, BuildStatus.PASSED) and \
-                                        len(builds) > 1 and builds[1].status != last_build.status:
+                                        builds[1].status != last_build.status:
                                     logger.error("Updating latest build: %r", last_build)
                                     notification_name = f"{last_build} {'FAILED' if failed else 'RECOVERED'}"
                                     if len(Notification.find_by_name(notification_name)) == 0:
