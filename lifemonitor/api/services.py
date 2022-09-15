@@ -402,15 +402,20 @@ class LifeMonitor:
 
     @classmethod
     def register_test_suite(cls, workflow_uuid, workflow_version,
-                            submitter: models.User, test_suite_metadata) -> models.TestSuite:
-        workflow = models.WorkflowVersion.get_user_workflow_version(submitter, workflow_uuid, workflow_version)
+                            workflow_submitter: models.User, test_suite_metadata) -> models.TestSuite:
+        workflow = models.WorkflowVersion.get_user_workflow_version(workflow_submitter, workflow_uuid, workflow_version)
         if not workflow:
             raise lm_exceptions.EntityNotFoundException(models.WorkflowVersion, (workflow_uuid, workflow_version))
         # For now only the workflow submitter can add test suites
-        if workflow.submitter != submitter:
+        if workflow.submitter != workflow_submitter:
             raise lm_exceptions.NotAuthorizedException("Only the workflow submitter can add test suites")
         assert isinstance(workflow, models.WorkflowVersion)
-        suite = cls._init_test_suite_from_json(workflow, submitter, test_suite_metadata)
+        if not test_suite_metadata.get('roc_suite', None):
+            test_suite_metadata['roc_suite'] = f"#{str(uuid4())}"
+        for i in test_suite_metadata.get('instances', []):
+            if 'roc_instance' not in i:
+                i['roc_instance'] = f"#{str(uuid4())}"
+        suite = cls._init_test_suite_from_json(workflow, workflow_submitter, test_suite_metadata)
         suite.save()
         return suite
 
