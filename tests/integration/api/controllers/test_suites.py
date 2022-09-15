@@ -105,3 +105,47 @@ def test_get_suite_instances(app_client, client_auth_method, user1, user1_auth, 
     # redundant check: the validation is performed by the connexion framework
     for p in ["items"]:
         assert p in data, f"Missing required property {p}"
+
+
+@pytest.mark.parametrize("client_auth_method", [
+    #    ClientAuthenticationMethod.BASIC,
+    ClientAuthenticationMethod.API_KEY,
+    ClientAuthenticationMethod.AUTHORIZATION_CODE,
+    ClientAuthenticationMethod.CLIENT_CREDENTIALS,
+    ClientAuthenticationMethod.REGISTRY_CODE_FLOW
+], indirect=True)
+def test_post_suite(app_client, client_auth_method, user1, user1_auth, valid_workflow):
+    w, workflow = utils.pick_and_register_workflow(user1, valid_workflow,
+                                                   public=client_auth_method == ClientAuthenticationMethod.NOAUTH)
+    assert len(workflow.test_suites) > 0, "Unexpected number of test suites"
+    suite = workflow.test_suites[0]
+    logger.debug("The test suite: %r", suite)
+    url = utils.build_workflow_path(workflow, subpath='suites')
+    logger.debug("URL: %r", url)
+    response = app_client.post(url,
+                               json={
+                                   'name': 'prova',
+                                   'definition': {
+                                       'path': 'my-workflow-test.yml',
+                                       'test_engine': {'type': 'planemo', 'version': '0.74'}
+                                   },
+                                   'instances': [
+                                       {
+                                           'name': 'first_instance',
+                                           'managed': False,
+                                           'service': {
+                                               'type': 'github',
+                                               'url': 'https://api.github.com'
+                                           },
+                                           'resource': 'repos/kikkomep/myworkflow/actions/workflows/wftest.yml'
+                                       }
+                                   ]
+                               },
+                               headers=user1_auth)
+    logger.debug(response)
+    if client_auth_method == ClientAuthenticationMethod.CLIENT_CREDENTIALS:
+        utils.assert_status_code(405, response.status_code)
+    else:
+        utils.assert_status_code(201, response.status_code)
+        data = json.loads(response.data)
+        logger.debug("Response data: %r", data)
