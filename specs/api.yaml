@@ -1135,7 +1135,7 @@ paths:
       tags: ["Workflows"]
       security:
         - apiKey: ["workflow.write"]
-        - RegistryClientCredentials: ["workflow.write"]
+        # - RegistryClientCredentials: ["workflow.write"]
         - RegistryCodeFlow: ["workflow.write"]
         - AuthorizationCodeFlow: ["workflow.write"]
       parameters:

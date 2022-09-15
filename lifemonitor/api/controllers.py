@@ -641,7 +641,7 @@ def suites_post(wf_uuid, body):
     if current_user and not current_user.is_anonymous:  # type: ignore
         submitter = current_user
     if submitter is None:
-        return "No valid submitter found", 404
+        return "Method not allowed", 405
     suite = lm.register_test_suite(
         workflow_uuid=wf_uuid,
         workflow_version=wf_version,
