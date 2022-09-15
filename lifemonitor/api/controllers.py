@@ -635,20 +635,21 @@ def suites_get_instances(suite_uuid):
 
 
 @authorized
-def suites_post(wf_uuid, wf_version, body):
-    # A the moment, this controller is not linked to the API specs
-    if current_user and not current_user.is_anonymous:
+def suites_post(wf_uuid, body):
+    submitter = None
+    wf_version = request.args.get('version', 'latest')
+    if current_user and not current_user.is_anonymous:  # type: ignore
         submitter = current_user
     if submitter is None:
         return "No valid submitter found", 404
     suite = lm.register_test_suite(
         workflow_uuid=wf_uuid,
         workflow_version=wf_version,
-        workflow_submitter=submitter,
-        test_suite_metadata=body['test_suite_metadata']
+        workflow_submitter=submitter,  # type: ignore
+        test_suite_metadata=body
     )
-    logger.debug("suite_post. Created test suite with name '%s'", suite.uuid)
-    return {'wf_uuid': str(suite.uuid)}, 201
+    logger.debug("suite_post. Created test suite with name '%s' [uuid: %r]", suite.name, suite.uuid)
+    return {'uuid': str(suite.uuid)}, 201
 
 
 @authorized
