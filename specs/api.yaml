@@ -1126,6 +1126,39 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+    post:
+      summary: "Submit a test suite for a workflow version"
+      description: >
+        Register a new test suite and its related test instances for the given workflow version.
+      x-openapi-router-controller: lifemonitor.api.controllers
+      operationId: "suites_post"
+      tags: ["Workflows"]
+      security:
+        - apiKey: ["workflow.write"]
+        - RegistryClientCredentials: ["workflow.write"]
+        - RegistryCodeFlow: ["workflow.write"]
+        - AuthorizationCodeFlow: ["workflow.write"]
+      parameters:
+        - $ref: "#/components/parameters/wf_uuid"
+        - $ref: "#/components/parameters/version"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestSuiteInput"
+      responses:
+        "201":
+          $ref: "#/components/responses/TestInstanceRegistered"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /suites/{suite_uuid}:
     get:
       summary: "Get a test suite"
@@ -1671,6 +1704,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Workflow"
+
+    TestSuiteRegistered:
+      description: A new test suite has been registered.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              uuid:
+                type: string
+                description: |
+                  Universal unique identifier of the test suite
+                readOnly: true
+                example: 43c06ed0-9432-4555-b7d2-34e0e0e8b072
 
     TestInstanceRegistered:
       description: A new test instance has been registered.
@@ -2508,6 +2555,20 @@ components:
             - uuid
             - instances
         - $ref: "#/components/schemas/TestSuiteStatusProperties"
+
+    TestSuiteInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: A name for the test suite.
+          example: Workflow Test Suite
+        definition:
+          $ref: "#/components/schemas/TestSuiteDefinition"
+        instances:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestInstance"
 
     ListOfTestSuite:
       type: object
