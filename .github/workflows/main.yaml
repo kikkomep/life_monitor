@@ -162,9 +162,13 @@ jobs:
       - name: Push Docker image
         if: ${{ env.ENABLE_DOCKER_PUSH == 'true' }}
         run: |
-          for t in "${DOCKER_TAGS}"; do
+          IFS=$'\n'      # Change IFS to new line
+          tags=($TAGS)   # split to array
+          for t in "${tags[@]}"; do
               docker push ${t}
           done
+        env:
+          TAGS: ${{ steps.docker_meta.outputs.tags }}
       # Clean up
       - name: Clean up working environment
         run: make clean
