@@ -165,6 +165,7 @@ jobs:
           IFS=$'\n'      # Change IFS to new line
           tags=($TAGS)   # split to array
           for t in "${tags[@]}"; do
+              echo "Pushing tag: $t"
               docker push ${t}
           done
         env:
