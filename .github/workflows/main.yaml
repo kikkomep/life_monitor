@@ -65,7 +65,7 @@ jobs:
       -
         name: Test
         run: |
-          docker run --rm -- ls -larth ${{ env.TEST_TAG }}
+          docker run --rm ${{ env.TEST_TAG }} -- ls -larth
       -
         name: Build and push
         uses: docker/build-push-action@v3
