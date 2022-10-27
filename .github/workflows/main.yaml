@@ -48,6 +48,14 @@ jobs:
       -
         name: Generate certificates
         run: make certs
+      # So now you can use Actions' own caching!
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
       -
         name: Build and export
         uses: docker/build-push-action@v3
@@ -56,6 +64,8 @@ jobs:
           file: docker/lifemonitor.Dockerfile
           tags: ${{ env.TEST_TAG }}
           outputs: type=docker,dest=/tmp/lifemonitor-image.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
       -
         name: Upload Docker image
         uses: actions/upload-artifact@v3
@@ -64,13 +74,17 @@ jobs:
           path: /tmp/lifemonitor-image.tar
       -
         name: Prepare LifeMonitor Repository
-        run: tar -zcvf /tmp/lifemonitor-repo.tar .
+        run: tar -zcvf /tmp/lifemonitor-repo.tar.gz ./
       -
         name: Upload LifeMonitor Repository
         uses: actions/upload-artifact@v3
         with:
           name: lifemonitor-repo
-          path: /tmp/lifemonitor-repo.tar
+          path: /tmp/lifemonitor-repo.tar.gz
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
       
   
   
@@ -119,7 +133,7 @@ jobs:
           path: /tmp/lifemonitor-repo.tar 
       -
         name: Extract LifeMonitor Repository
-        run: tar -xzvf /tmp/lifemonitor-repo.tar -C .
+        run: tar -xzvf /tmp/lifemonitor-repo.tar.gz -C ./
       -
         name: Load image
         run: |
@@ -139,6 +153,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.LATEST_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
 
 
   # # Verifies pep8, pyflakes and circular complexity
