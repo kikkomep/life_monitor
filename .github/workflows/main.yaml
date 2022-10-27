@@ -57,11 +57,21 @@ jobs:
           tags: ${{ env.TEST_TAG }}
           outputs: type=docker,dest=/tmp/lifemonitor-image.tar
       -
-        name: Upload artifact
+        name: Upload Docker image
         uses: actions/upload-artifact@v3
         with:
           name: lifemonitor-image
-          path: /tmp/lifemonitor-image.tar      
+          path: /tmp/lifemonitor-image.tar
+      -
+        name: Prepare LifeMonitor Repository
+        run: tar -zcvf /tmp/lifemonitor-repo.tar .
+      -
+        name: Upload LifeMonitor Repository
+        uses: actions/upload-artifact@v3
+        with:
+          name: lifemonitor-repo
+          path: /tmp/lifemonitor-repo.tar
+      
   
   
   test:
@@ -101,6 +111,15 @@ jobs:
         with:
           name: lifemonitor-image
           path: /tmp
+      -
+        name: Download repo
+        uses: actions/download-artifact@v3
+        with:
+          name: lifemonitor-repo
+          path: /tmp/lifemonitor-repo.tar 
+      -
+        name: Extract LifeMonitor Repository
+        run: tar -xzvf /tmp/lifemonitor-repo.tar -C .
       -
         name: Load image
         run: |
