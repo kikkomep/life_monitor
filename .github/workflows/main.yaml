@@ -65,7 +65,7 @@ jobs:
       -
         name: Test
         run: |
-          docker run --rm ${{ env.TEST_TAG }} -- ls -larth
+          docker run --rm --entrypoint=/bin/bash ${{ env.TEST_TAG }} -c "ls -larth"
       -
         name: Build and push
         uses: docker/build-push-action@v3
