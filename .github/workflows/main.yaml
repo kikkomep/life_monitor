@@ -30,7 +30,7 @@ env:
   LATEST_TAG: kikkomep/lifemonitor:test
 
 jobs:
-  docker_check:
+  docker_build:
     name: "Check Env"
     runs-on: ubuntu-latest
     steps:
@@ -49,23 +49,56 @@ jobs:
         name: Generate certificates
         run: make certs
       -
+        name: Build and export
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: docker/lifemonitor.Dockerfile
+          tags: ${{ env.TEST_TAG }}
+          outputs: type=docker,dest=/tmp/lifemonitor-image.tar
+      -
+        name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: lifemonitor-image
+          path: /tmp/myimage.tar      
+  
+  
+  tests:
+    name: "Test"
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: lifemonitor-image
+          path: /tmp
+      -
+        name: Load image
+        run: |
+          docker load --input /tmp/lifemonitor-image.tar
+          docker image ls -a
+      -
+        name: Test
+        run: |
+          docker run --rm --entrypoint=/bin/bash ${{ env.TEST_TAG }} -c "ls -larth"
+  push:
+    name: "Push"
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
         name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and export to Docker
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          file: docker/lifemonitor.Dockerfile
-          load: true
-          tags: ${{ env.TEST_TAG }}
-      -
-        name: Test
-        run: |
-          docker run --rm --entrypoint=/bin/bash ${{ env.TEST_TAG }} -c "ls -larth"
       -
         name: Build and push
         uses: docker/build-push-action@v3
