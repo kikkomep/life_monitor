@@ -30,7 +30,7 @@ env:
   LATEST_TAG: kikkomep/lifemonitor:test
 
 jobs:
-  docker_build:
+  build:
     name: "Check Env"
     runs-on: ubuntu-latest
     steps:
@@ -64,9 +64,10 @@ jobs:
           path: /tmp/myimage.tar      
   
   
-  tests:
+  test:
     name: "Test"
     runs-on: ubuntu-latest
+    needs: build
     steps:
       -
         name: Set up Docker Buildx
@@ -89,6 +90,7 @@ jobs:
   push:
     name: "Push"
     runs-on: ubuntu-latest
+    needs: test
     steps:
       -
         name: Set up Docker Buildx
