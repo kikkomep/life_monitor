@@ -128,7 +128,7 @@ jobs:
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          # load: true
+          load: true
       - name: Update cache
         run: |
           rm -rf /tmp/.buildx-cache
