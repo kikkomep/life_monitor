@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [flake8, openapi_specs]
     steps:
-      - name: "test"
+      - name: "List Docker images"
         run: "docker images"
       - name: Checkout
         uses: actions/checkout@v3
@@ -176,7 +176,9 @@ jobs:
   #         load: true
       # Setup testing environment
       - name: Set up testing environment
-        run: make start-testing
+        run: |
+          docker tag lifemonitor:$GITHUB_SHA crs4/lifemonitor:latest
+          make TAGS="lifemonitor:$GITHUB_SHA" start-testing
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
