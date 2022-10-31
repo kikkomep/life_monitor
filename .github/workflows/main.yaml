@@ -61,6 +61,7 @@ jobs:
         run: |
           git fetch --unshallow
           sw_version=$(python3 -c 'import lifemonitor; print(lifemonitor.__version__)')
+          echo "Current Software Version: ${sw_version}"
           echo "SOFTWARE_VERSION=${sw_version}" >> $GITHUB_ENV
           echo "SOFTWARE_VERSION_AS_DOCKER_TAG=$( echo ${sw_version} | tr + _ )" >> $GITHUB_ENV
       # Set Docker image
