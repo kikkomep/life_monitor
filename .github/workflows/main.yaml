@@ -32,7 +32,7 @@ env:
 jobs:
   # Verifies pep8, pyflakes and circular complexity
   flake8:
-    name: Check Flake8 (python ${{ matrix.python-version }})
+    name: Lint Python Code (Flake8) (python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -51,7 +51,7 @@ jobs:
 
   # Validate OpenAPI specs
   openapi_specs:
-    name: Check OpenAPI Specs (python ${{ matrix.python-version }})
+    name: Lint OpenAPI Specs (python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -71,6 +71,7 @@ jobs:
   build:
     name: "Build, Test and Push Docker Image"
     runs-on: ubuntu-latest
+    needs: [flake8, openapi_specs]
     steps:
       - name: "test"
         run: "docker images"
