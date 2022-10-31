@@ -174,9 +174,32 @@ jobs:
   #         # labels: ${{ steps.docker_meta.outputs.labels }}
   #         # cache-from: type=local,src=/tmp/.buildx-cache
   #         load: true
-      - name: Run Tests
-        run: |
-          docker run --rm --entrypoint=/bin/bash kikkomep/lifemonitor:latest -c "ls -larth"
+      # Setup testing environment
+      - name: Set up testing environment
+        run: make start-testing
+        env:
+          TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
+          TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
+          TRAVIS_TESTING_SERVICE_TYPE: travis
+          GH_TESTING_SERVICE_URL: ${{ secrets.GH_TESTING_SERVICE_URL }}
+          GH_TESTING_SERVICE_TOKEN: ${{ secrets.GH_TESTING_SERVICE_TOKEN }}
+          GH_TESTING_SERVICE_TYPE: github
+      # Run tests
+      - name: Run tests
+        run: make run-tests
+        env:
+          TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
+          TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
+          TRAVIS_TESTING_SERVICE_TYPE: travis
+          GH_TESTING_SERVICE_URL: ${{ secrets.GH_TESTING_SERVICE_URL }}
+          GH_TESTING_SERVICE_TOKEN: ${{ secrets.GH_TESTING_SERVICE_TOKEN }}
+          GH_TESTING_SERVICE_TYPE: github
+      # Teardown testing environment
+      - name: Teardown testing environment
+        run: make down
+      # - name: Run Tests
+      #   run: |
+      #     docker run --rm --entrypoint=/bin/bash kikkomep/lifemonitor:latest -c "ls -larth"
 
   # push:
   #   name: "Push LifeMonitor Docker Image"
