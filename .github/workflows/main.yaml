@@ -87,8 +87,15 @@ jobs:
       -
         name: Generate certificates
         run: make certs
+      -
+        name: Download docker cache
+        uses: actions/download-artifact@v3
+        with:
+          name: lifemonitor-docker-cache
+          path: /tmp/.buildx-cache
       # So now you can use Actions' own caching!
-      - name: Cache Docker layers
+      - 
+        name: Cache Docker layers
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
