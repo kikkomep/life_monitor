@@ -1,5 +1,8 @@
 FROM python:3.9-slim-buster as base
 
+ARG SW_VERSION
+ARG BUILD_NUMBER
+
 # Install base requirements
 RUN apt-get update -q \
  && apt-get install -y --no-install-recommends \
@@ -77,17 +80,14 @@ COPY --chown=lm:lm lifemonitor /lm/lifemonitor
 COPY --chown=lm:lm migrations /lm/migrations
 COPY --chown=lm:lm cli /lm/cli
 
-
+# Set software and build number
+ENV LM_SW_VERSION=$SW_VERSION
+ENV LM_BUILD_NUMBER=$BUILD_NUMBER
 ##################################################################
 ## Node Stage
 ##################################################################
-ARG SW_VERSION
-ARG BUILD_NUMBER
 FROM node:14.16.0-alpine3.12 as node
 
-# Set software and build number
-ENV LM_SW_VERSION=${SW_VERSION}
-ENV LM_BUILD_NUMBER=${BUILD_NUMBER}
 
 RUN mkdir -p /static && apk add --no-cache bash
 WORKDIR /static/src
