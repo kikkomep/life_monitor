@@ -130,7 +130,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           load: true
-          build-args: SW_SOFTWARE=${{ env.SOFTWARE_VERSION }}
+          build-args: SW_SOFTWARE="${{ env.SOFTWARE_VERSION }}"
       - name: Update cache
         run: |
           rm -rf /tmp/.buildx-cache
@@ -141,7 +141,7 @@ jobs:
         # which is the default used by `make run-tests` to run tests
         run: |
           docker tag $USER_REPO:${GITHUB_REF##*/} crs4/lifemonitor:latest
-          SW_SOFTWARE=${{ env.SOFTWARE_VERSION }} make start-testing
+          SW_SOFTWARE="${{ env.SOFTWARE_VERSION }}" make start-testing
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
@@ -180,4 +180,4 @@ jobs:
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
-          build-args: SW_SOFTWARE=${{ env.SOFTWARE_VERSION }}
+          build-args: SW_SOFTWARE="${{ env.SOFTWARE_VERSION }}"
