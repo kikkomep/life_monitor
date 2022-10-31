@@ -175,6 +175,8 @@ jobs:
   #         # cache-from: type=local,src=/tmp/.buildx-cache
   #         load: true
       # Setup testing environment
+      - name: List Docker images
+        run:  docker images
       - name: Set up testing environment
         run: |
           docker tag lifemonitor:$GITHUB_SHA crs4/lifemonitor:latest
