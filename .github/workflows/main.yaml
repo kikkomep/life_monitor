@@ -184,7 +184,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-repo
-          path: /tmp/lifemonitor-repo.tar 
+          path: /tmp/lifemonitor-repo.tar.gz 
       -
         name: Extract LifeMonitor Repository
         run: tar -xzvf /tmp/lifemonitor-repo.tar.gz -C ./
