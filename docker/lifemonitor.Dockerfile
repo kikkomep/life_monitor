@@ -1,7 +1,8 @@
+FROM python:3.9-slim-buster as base
+
 ARG SW_VERSION
 ARG BUILD_NUMBER
 
-FROM python:3.9-slim-buster as base
 # Install base requirements
 RUN apt-get update -q \
  && apt-get install -y --no-install-recommends \
