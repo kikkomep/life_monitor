@@ -29,7 +29,46 @@ env:
   TEST_TAG: kikkomep/lifemonitor:test
   LATEST_TAG: kikkomep/lifemonitor:test
 
+
 jobs:
+  # Verifies pep8, pyflakes and circular complexity
+  flake8:
+    name: Check Flake8 (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+      - name: Set up Python v${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install flake8
+        run: pip install flake8
+      - name: Run checks
+        run: flake8 -v .
+
+  # Validate OpenAPI specs
+  openapi_specs:
+    name: Check OpenAPI Specs (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+      - name: Set up Python v${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install OpenAPI Spec Validator
+        run: pip install openapi-spec-validator
+      - name: Run checks
+        run: openapi-spec-validator specs/api.yaml
+
   build:
     name: "Build, Test and Push Docker Image"
     runs-on: ubuntu-latest
