@@ -140,7 +140,7 @@ jobs:
         # which is the default used by `make run-tests` to run tests
         run: |
           docker tag $USER_REPO:${GITHUB_REF##*/} crs4/lifemonitor:latest
-          make start-testing
+          make SOFTWARE_VERSION=${{ env.SOFTWARE_VERSION }} start-testing
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
@@ -151,7 +151,7 @@ jobs:
           USER_REPO: ${{ secrets.DOCKERHUB_REPO }}
       # Run tests
       - name: Run tests
-        run: make run-tests
+        run: make SOFTWARE_VERSION=${{ env.SOFTWARE_VERSION }} run-tests
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
