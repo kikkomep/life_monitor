@@ -179,7 +179,7 @@ jobs:
         run:  docker images
       - name: Set up testing environment
         run: |
-          docker tag life_monitor:$GITHUB_SHA crs4/lifemonitor:latest
+          docker tag life_monitor:$GITHUB_HEAD_REF crs4/lifemonitor:latest
           make start-testing
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
