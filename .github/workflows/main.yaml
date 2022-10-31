@@ -29,7 +29,6 @@ env:
   TEST_TAG: kikkomep/lifemonitor:test
   LATEST_TAG: kikkomep/lifemonitor:test
 
-
 jobs:
   # Verifies pep8, pyflakes and circular complexity
   flake8:
@@ -74,30 +73,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "test"
-        run: "docker images"      
-      -
-        name: Checkout
+        run: "docker images"
+      - name: Checkout
         uses: actions/checkout@v3
-      -
-        name: Set up QEMU
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      -
-        name: Generate certificates
+      - name: Generate certificates
         run: make certs
       # So now you can use Actions' own caching!
-      - 
-        name: Cache Docker layers
+      - name: Cache Docker layers
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      - 
-        name: "Set software version"
+      - name: "Set software version"
         run: |
           git fetch --unshallow
           sw_version=$(python3 -c 'import lifemonitor; print(lifemonitor.__version__)')
@@ -105,14 +98,12 @@ jobs:
           echo "SOFTWARE_VERSION=${sw_version}" >> $GITHUB_ENV
           echo "SOFTWARE_VERSION_AS_DOCKER_TAG=$( echo ${sw_version} | tr + _ )" >> $GITHUB_ENV
       # Set Docker image
-      - 
-        name: Set up Docker repository
+      - name: Set up Docker repository
         run: echo "DOCKERHUB_REPO=$( if [[ -n $USER_REPO ]]; then echo $USER_REPO; else echo $GITHUB_REPOSITORY; fi )" >> $GITHUB_ENV
         env:
           USER_REPO: ${{ secrets.DOCKERHUB_REPO }}
       # Extract Docker metadata
-      - 
-        name: Extract Docker metadata
+      - name: Extract Docker metadata
         id: docker_meta
         uses: docker/metadata-action@v4
         with:
@@ -127,8 +118,7 @@ jobs:
             type=sha
           labels: |
             org.opencontainers.image.version=${{ env.SOFTWARE_VERSION }}.build${{ github.run_number }}
-      -
-        name: Build Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
@@ -138,118 +128,80 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           # load: true
-      - 
-        name: Update cache
+      - name: Update cache
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-      -
-        name: Prepare LifeMonitor Repository
+      - name: Prepare LifeMonitor Repository
         run: tar -zcvf /tmp/lifemonitor-repo.tar.gz ./
-      -
-        name: Upload LifeMonitor Repository
+      - name: Upload LifeMonitor Repository
         uses: actions/upload-artifact@v3
         with:
           name: lifemonitor-repo
           path: /tmp/lifemonitor-repo.tar.gz
-      -
-        name: Upload Docker Cache
+      - name: Upload Docker Cache
         uses: actions/upload-artifact@v3
         with:
           name: lifemonitor-docker-cache
           path: /tmp/.buildx-cache
-      # -
-      #   name: Run Tests
-      #   run: |
-      #     docker run --rm --entrypoint=/bin/bash kikkomep/lifemonitor:latest -c "ls -larth"
-      # -
-      #   name: Login to Docker Hub
-      #   uses: docker/login-action@v2
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USER }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # -
-      #   name: Push Docker image
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     context: .
-      #     file: docker/lifemonitor.Dockerfile
-      #     platforms: linux/amd64
-      #     push: true
-      #     tags: ${{ steps.docker_meta.outputs.tags }}
-      #     labels: ${{ steps.docker_meta.outputs.labels }}
-      #     cache-from: type=local,src=/tmp/.buildx-cache
-  
-  
+
   test:
     name: "Test LifeMonitor on Docker Image"
     runs-on: ubuntu-latest
     needs: build
     steps:
-      -
-        name: Download repo
+      - name: Download repo
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-repo
           path: /tmp/
-      -
-        name: Download docker cache
+      - name: Download docker cache
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-docker-cache
           path: /tmp/.buildx-cache
-      -
-        name: Extract LifeMonitor Repository
+      - name: Extract LifeMonitor Repository
         run: tar -xzvf /tmp/lifemonitor-repo.tar.gz -C ./
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      -
-        name: Build Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
           file: docker/lifemonitor.Dockerfile
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache          
+          cache-from: type=local,src=/tmp/.buildx-cache
           load: true
-      -
-        name: Run Tests
+      - name: Run Tests
         run: |
           docker run --rm --entrypoint=/bin/bash kikkomep/lifemonitor:latest -c "ls -larth"
-      
+
   push:
     name: "Push LifeMonitor Docker Image"
     runs-on: ubuntu-latest
     needs: test
     steps:
-      -
-        name: Download repo
+      - name: Download repo
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-repo
           path: /tmp/
-      -
-        name: Download docker cache
+      - name: Download docker cache
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-docker-cache
           path: /tmp/.buildx-cache
-      -
-        name: Extract LifeMonitor Repository
+      - name: Extract LifeMonitor Repository
         run: tar -xzvf /tmp/lifemonitor-repo.tar.gz -C ./
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      -
-        name: Login to Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push
+      - name: Build and push
         uses: docker/build-push-action@v3
         with:
           context: .
@@ -260,8 +212,6 @@ jobs:
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
 
-
-  
   # # Build, Test and Push Docker image
   # tests:
   #   name: Build, Test and Push Docker image
@@ -273,33 +223,33 @@ jobs:
   #     - uses: actions/setup-python@v4
   #       with:
   #         python-version: "3.7"
-      # - name: "Set software version"
-      #   run: |
-      #     git fetch --unshallow
-      #     sw_version=$(python3 -c 'import lifemonitor; print(lifemonitor.__version__)')
-      #     echo "SOFTWARE_VERSION=${sw_version}" >> $GITHUB_ENV
-      #     echo "SOFTWARE_VERSION_AS_DOCKER_TAG=$( echo ${sw_version} | tr + _ )" >> $GITHUB_ENV
-      # # Set Docker image
-      # - name: Set up Docker repository
-      #   run: echo "DOCKERHUB_REPO=$( if [[ -n $USER_REPO ]]; then echo $USER_REPO; else echo $GITHUB_REPOSITORY; fi )" >> $GITHUB_ENV
-      #   env:
-      #     USER_REPO: ${{ secrets.DOCKERHUB_REPO }}
-      # # Extract Docker metadata
-      # - name: Extract Docker metadata
-      #   id: docker_meta
-      #   uses: docker/metadata-action@v3
-      #   with:
-      #     images: ${{ env.DOCKERHUB_REPO }}
-      #     tags: |
-      #       type=ref,event=branch
-      #       type=ref,event=pr
-      #       type=semver,pattern={{version}}
-      #       type=semver,pattern={{major}}.{{minor}}
-      #       type=raw,value=${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG }}
-      #       type=raw,value=${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG}}.build${{ github.run_number }}
-      #       type=sha
-      #     labels: |
-      #       org.opencontainers.image.version=${{ env.SOFTWARE_VERSION }}.build${{ github.run_number }}
+  # - name: "Set software version"
+  #   run: |
+  #     git fetch --unshallow
+  #     sw_version=$(python3 -c 'import lifemonitor; print(lifemonitor.__version__)')
+  #     echo "SOFTWARE_VERSION=${sw_version}" >> $GITHUB_ENV
+  #     echo "SOFTWARE_VERSION_AS_DOCKER_TAG=$( echo ${sw_version} | tr + _ )" >> $GITHUB_ENV
+  # # Set Docker image
+  # - name: Set up Docker repository
+  #   run: echo "DOCKERHUB_REPO=$( if [[ -n $USER_REPO ]]; then echo $USER_REPO; else echo $GITHUB_REPOSITORY; fi )" >> $GITHUB_ENV
+  #   env:
+  #     USER_REPO: ${{ secrets.DOCKERHUB_REPO }}
+  # # Extract Docker metadata
+  # - name: Extract Docker metadata
+  #   id: docker_meta
+  #   uses: docker/metadata-action@v3
+  #   with:
+  #     images: ${{ env.DOCKERHUB_REPO }}
+  #     tags: |
+  #       type=ref,event=branch
+  #       type=ref,event=pr
+  #       type=semver,pattern={{version}}
+  #       type=semver,pattern={{major}}.{{minor}}
+  #       type=raw,value=${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG }}
+  #       type=raw,value=${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG}}.build${{ github.run_number }}
+  #       type=sha
+  #     labels: |
+  #       org.opencontainers.image.version=${{ env.SOFTWARE_VERSION }}.build${{ github.run_number }}
   #     # Set up Docker tags
   #     - name: Set up Docker tags
   #       run: |
