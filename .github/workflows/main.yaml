@@ -151,6 +151,12 @@ jobs:
         with:
           name: lifemonitor-repo
           path: /tmp/lifemonitor-repo.tar.gz
+      -
+        name: Upload Docker Cache
+        uses: actions/upload-artifact@v3
+        with:
+          name: lifemonitor-docker-cache
+          path: /tmp/.buildx-cache
       # -
       #   name: Run Tests
       #   run: |
@@ -184,6 +190,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-repo
+          path: /tmp/
+      -
+        name: Download docker cache
+        uses: actions/download-artifact@v3
+        with:
+          name: lifemonitor-docker-cache
           path: /tmp/
       -
         name: Extract LifeMonitor Repository
