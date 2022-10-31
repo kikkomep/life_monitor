@@ -1,3 +1,5 @@
+ARG SW_VERSION
+ARG BUILD_NUMBER
 FROM python:3.9-slim-buster as base
 
 # Install base requirements
@@ -34,7 +36,7 @@ RUN curl -fsSL get.nextflow.io | bash
 WORKDIR /lm
 
 # Copy utility scripts
-COPY --chown=root:root \
+COPY \
     docker/wait-for-postgres.sh \
     docker/wait-for-redis.sh \
     docker/lm_entrypoint.sh \
@@ -78,8 +80,6 @@ COPY --chown=lm:lm migrations /lm/migrations
 COPY --chown=lm:lm cli /lm/cli
 
 # Set software and build number
-ARG SW_VERSION
-ARG BUILD_NUMBER
 ENV LM_SW_VERSION=${SW_VERSION}
 ENV LM_BUILD_NUMBER=${BUILD_NUMBER}
 
