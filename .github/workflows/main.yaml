@@ -196,7 +196,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: lifemonitor-docker-cache
-          path: /tmp/
+          path: /tmp/.buildx-cache
       -
         name: Extract LifeMonitor Repository
         run: tar -xzvf /tmp/lifemonitor-repo.tar.gz -C ./
