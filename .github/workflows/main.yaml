@@ -99,7 +99,7 @@ jobs:
           echo "SOFTWARE_VERSION=${sw_version}" >> $GITHUB_ENV
           echo "SOFTWARE_VERSION_AS_DOCKER_TAG=$( echo ${sw_version} | tr + _ )" >> $GITHUB_ENV
       # Set Docker image
-      - name: Set up Docker repository
+      - name: Set Docker repository
         run: echo "DOCKERHUB_REPO=$( if [[ -n $USER_REPO ]]; then echo $USER_REPO; else echo $GITHUB_REPOSITORY; fi )" >> $GITHUB_ENV
         env:
           USER_REPO: ${{ secrets.DOCKERHUB_REPO }}
