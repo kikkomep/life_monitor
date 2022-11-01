@@ -86,23 +86,23 @@ ENV LM_BUILD_NUMBER=$BUILD_NUMBER
 ##################################################################
 ## Node Stage
 ##################################################################
-#FROM node:14.16.0-alpine3.12 as node
+FROM node:14.16.0-alpine3.12 as node
 
 
-#RUN mkdir -p /static && apk add --no-cache bash
-#WORKDIR /static/src
-#COPY lifemonitor/static/src/package.json package.json
-#RUN npm install
+RUN mkdir -p /static && apk add --no-cache bash
+WORKDIR /static/src
+COPY lifemonitor/static/src/package.json package.json
+RUN npm install
 # Copy and build static files
 # Use a separated run to take advantage
 # of node_modules cache from the previous layer
-#COPY lifemonitor/static/src .
-#RUN npm run production
+COPY lifemonitor/static/src .
+RUN npm run production
 
 
 ##################################################################
 ## Target Stage
 ##################################################################
-#FROM base as target
+FROM base as target
 
-#COPY --from=node --chown=lm:lm /static/dist /lm/lifemonitor/static/dist
+COPY --from=node --chown=lm:lm /static/dist /lm/lifemonitor/static/dist
