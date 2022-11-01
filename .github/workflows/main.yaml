@@ -130,7 +130,9 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           load: true
-          build-args: SW_VERSION="${{ env.SOFTWARE_VERSION }}"
+          build-args: |
+            SW_VERSION=${{ env.SOFTWARE_VERSION }}
+            BUILD_NUMBER=${{ github.run_number }}
       - name: Update cache
         run: |
           rm -rf /tmp/.buildx-cache
@@ -180,4 +182,7 @@ jobs:
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
-          build-args: SW_VERSION="${{ env.SOFTWARE_VERSION }}"
+          build-args: |
+            SW_VERSION=${{ env.SOFTWARE_VERSION }}
+            BUILD_NUMBER=${{ github.run_number }}
+
