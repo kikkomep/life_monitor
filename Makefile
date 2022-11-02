@@ -36,7 +36,7 @@ endif
 
 # set flag to skip build
 skip_build_opt := 0
-ifeq ($(DOCKER_BUILDKIT),1)
+ifeq ($(SKIP_BUILD),1)
 	skip_build_opt := 1
 endif
 
@@ -119,7 +119,7 @@ certs:
 
 lifemonitor: docker/lifemonitor.Dockerfile certs app.py gunicorn.conf.py ## Build LifeMonitor Docker image
 	if [[ $(skip_build_opt) == 1 ||  $(skip_build_opt) == true ]]; then \
-		printf "\n$(bold)Skip build of LifeMonitor Docker image...$(reset)\n" ; \
+		printf "\n$(yellow)WARNING: $(bold)Skip build of LifeMonitor Docker image !!! $(reset)\n" ; \
 	else \
 		printf "\n$(bold)Building LifeMonitor Docker image...$(reset)\n" ; \
 		$(build_kit) docker $(build_cmd) $(cache_from_opt) $(cache_to_opt) \
