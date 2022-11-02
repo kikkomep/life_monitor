@@ -26,6 +26,8 @@ env:
   TERM: xterm
   # enable Docker push only if the required secrets are defined
   ENABLE_DOCKER_PUSH: ${{ secrets.DOCKERHUB_USER != null && secrets.DOCKERHUB_TOKEN != null }}
+  TEST_TAG: kikkomep/lifemonitor:test
+  LATEST_TAG: kikkomep/lifemonitor:test
 
 jobs:
   # Verifies pep8, pyflakes and circular complexity
@@ -77,14 +79,6 @@ jobs:
         uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
-      # Set Docker image
-      - name: Set Docker repository
-        run: |
-          echo "DOCKERHUB_REPO=$( if [[ -n "${{ secrets.DOCKERHUB_REPO }}" ]]; then 
-          echo ${{ secrets.DOCKERHUB_REPO }}; 
-          else echo ${{ github.repository_owner }}/lifemonitor; fi )" >> $GITHUB_ENV
-        env:
-          USER_REPO: ${{ secrets.DOCKERHUB_REPO }}      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Generate certificates
@@ -104,6 +98,12 @@ jobs:
           echo "Current Software Version: ${sw_version}"
           echo "SOFTWARE_VERSION=${sw_version}" >> $GITHUB_ENV
           echo "SOFTWARE_VERSION_AS_DOCKER_TAG=$( echo ${sw_version} | tr + _ )" >> $GITHUB_ENV
+      # Set Docker image
+      - name: Set Docker repository
+        run: |
+          echo "DOCKERHUB_REPO=$( if [[ -n "${{ secrets.DOCKERHUB_REPO }}" ]]; then 
+          echo "${{ secrets.DOCKERHUB_REPO }}"; 
+          else echo "${{ github.repository_owner }}/lifemonitor"; fi )" >> $GITHUB_ENV
       # Extract Docker metadata and set labels and tags
       - name: Extract Docker metadata
         id: docker_meta
