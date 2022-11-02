@@ -146,7 +146,7 @@ jobs:
           docker images ;
           docker tag ${{ env.DOCKERHUB_REPO }}:${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG }} crs4/lifemonitor:latest ;
           docker images ;
-          SW_VERSION=${{ env.SOFTWARE_VERSION }} BUILD_NUMBER=${{ github.run_number }} make start-testing
+          SKIP_BUILD=true SW_VERSION=${{ env.SOFTWARE_VERSION }} BUILD_NUMBER=${{ github.run_number }} make start-testing
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
@@ -156,7 +156,7 @@ jobs:
           GH_TESTING_SERVICE_TYPE: github
       # Run tests
       - name: Run tests
-        run: SW_VERSION=${{ env.SOFTWARE_VERSION }} BUILD_NUMBER=${{ github.run_number }} make run-tests
+        run: SKIP_BUILD=true SW_VERSION=${{ env.SOFTWARE_VERSION }} BUILD_NUMBER=${{ github.run_number }} make run-tests
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
