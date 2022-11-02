@@ -118,7 +118,7 @@ certs:
 	fi
 
 lifemonitor: docker/lifemonitor.Dockerfile certs app.py gunicorn.conf.py ## Build LifeMonitor Docker image
-	if [[ $(skip_build_opt) == 1 ||  $(skip_build_opt) == true ]]; then \
+	@if [[ $(skip_build_opt) == 1 ||  $(skip_build_opt) == true ]]; then \
 		printf "\n$(yellow)WARNING: $(bold)Skip build of LifeMonitor Docker image !!! $(reset)\n" ; \
 	else \
 		printf "\n$(bold)Building LifeMonitor Docker image...$(reset)\n" ; \
