@@ -142,7 +142,7 @@ jobs:
         # Tag the latest built image as `crs4/lifemonitor:latest`
         # which is the default used by `make run-tests` to run tests
         run: |
-          docker tag $USER_REPO:${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG }} crs4/lifemonitor:latest
+          docker tag ${{ env.DOCKERHUB_REPO }}:${{ env.SOFTWARE_VERSION_AS_DOCKER_TAG }} crs4/lifemonitor:latest
           SW_VERSION="${{ env.SOFTWARE_VERSION }}" make start-testing
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
