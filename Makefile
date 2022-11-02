@@ -114,8 +114,7 @@ certs:
 lifemonitor: docker/lifemonitor.Dockerfile certs app.py gunicorn.conf.py ## Build LifeMonitor Docker image
 	printf "\n$(bold)Building LifeMonitor Docker image...$(reset)\n" ; \
 	$(build_kit) docker $(build_cmd) $(cache_from_opt) $(cache_to_opt) \
-		  ${sw_version_arg} ${build_number_arg} \
-		  ${tags_opt} ${labels_opt} ${platforms_opt} \
+		  ${sw_version_arg} ${build_number_arg} ${tags_opt} ${labels_opt} ${platforms_opt} \
 		  -f docker/lifemonitor.Dockerfile -t crs4/lifemonitor . ;\
 	printf "$(done)\n"
 
