@@ -154,7 +154,7 @@ jobs:
           USER_REPO: ${{ secrets.DOCKERHUB_REPO }}
       # Run tests
       - name: Run tests
-        run: SW_SOFTWARE=${{ env.SOFTWARE_VERSION }} make run-tests
+        run: SW_VERSION=${{ env.SOFTWARE_VERSION }} make run-tests
         env:
           TRAVIS_TESTING_SERVICE_URL: ${{ secrets.TRAVIS_TESTING_SERVICE_URL }}
           TRAVIS_TESTING_SERVICE_TOKEN: ${{ secrets.TRAVIS_TESTING_SERVICE_TOKEN }}
