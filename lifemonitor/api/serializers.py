@@ -554,7 +554,7 @@ class SuiteSchema(ResourceMetadataSchema):
     definition = fields.Method("get_definition")
     instances = fields.Nested(TestInstanceSchema(self_link=False, exclude=('meta',)),
                               attribute="test_instances", many=True)
-    status = fields.Method("get_status")
+    aggregate_test_status = fields.Method("get_status")
     latest_builds = fields.Method("get_latest_builds")
 
     def __init__(self, *args, self_link: bool = True,
@@ -569,9 +569,11 @@ class SuiteSchema(ResourceMetadataSchema):
 
     def get_status(self, obj):
         try:
-            return SuiteStatusSchema(only=('status',)).dump(obj)['status'] if self.status else None
-        except Exception:
+            return SuiteStatusSchema(only=('aggregate_test_status',)).dump(obj)['aggregate_test_status'] if self.status else None
+        except Exception as e:
             logger.warning("Unable to extract status for suite: %r", obj)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
             return None
 
     def get_latest_builds(self, obj):
