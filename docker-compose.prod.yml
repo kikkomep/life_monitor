@@ -7,7 +7,7 @@ services:
       - "lm"
     ports:
       - "8443:8443"
-    restart: "always"
+    restart: "unless-stopped"
     healthcheck:
       test: >
         /bin/sh -c "http_code=$$(curl --insecure https://lm:8443/health -s -w %{http_code}); if [ $${http_code} -eq 502 ]; then exit 1; fi;"
