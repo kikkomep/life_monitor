@@ -25,48 +25,13 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm.attributes import flag_modified
 
+from lifemonitor.api.models.services.github import SCOPES
 from lifemonitor.auth.models import User
 from lifemonitor.auth.oauth2.client.models import OAuth2Token
 from lifemonitor.utils import match_ref
 
 # Config a module level logger
 logger = logging.getLogger(__name__)
-
-
-class Scope:
-    def __init__(self, oauth_scopes: str, name: Optional[str]) -> None:
-        assert oauth_scopes, "Invalid oauth scopes"
-        self.name = name or oauth_scopes.replace(":", "_").replace(",", "_")
-        self.oauth_scopes = oauth_scopes
-
-    @property
-    def scopes(self) -> List[str]:
-        return self.oauth_scopes.split(",")
-
-    @property
-    def encoded_scopes(self) -> str:
-        return "+".join(self.scopes)
-
-
-class SCOPES:
-
-    # minimal scope to get the user identity
-    IDENTITY = Scope("read:user,user:email", "identity")
-    # scope to read repositories and update webhooks
-    REPO_READ = Scope("read:user,user:email,admin:repo_hook,workflow", "repo_read")
-    # scope to write repositories and packages
-    REPO_WRITE = Scope("repo,user:email,write:packages", "repo_write")
-
-    # list of scope labels
-    names = [s.name for s in [IDENTITY, REPO_READ, REPO_WRITE]]
-
-    # map scope name to scope object
-    scopesMap = {s.name: s for s in [IDENTITY, REPO_READ, REPO_WRITE]}
-
-    # get scope object from scope name
-    @staticmethod
-    def get_scope(name: str) -> Scope:
-        return SCOPES.scopesMap[name]
 
 
 class GithubUserSettings():
