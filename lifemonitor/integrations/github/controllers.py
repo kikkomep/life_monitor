@@ -712,7 +712,6 @@ def issue_comment(event: GithubEvent):
 __event_handlers__ = {
     "ping": ping,
     "workflow_run": refresh_workflow_builds,
-    "workflow_job": refresh_workflow_build,
     "installation": installation_repositories,
     "installation_repositories": installation_repositories,
     "push": push,
