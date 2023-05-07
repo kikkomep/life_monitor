@@ -394,7 +394,7 @@ def update_notifications_switch():
 def update_github_settings():
     logger.debug("Updating Github Settings")
     from lifemonitor.integrations.github.forms import GithubSettingsForm
-    from lifemonitor.integrations.github.settings import SCOPES
+    from lifemonitor.api.models.services.github import SCOPES
     # initialize the form
     form = GithubSettingsForm()
 
@@ -490,7 +490,7 @@ def enable_periodic_builds():
 @login_required
 def enable_github_integration():
     from lifemonitor.integrations.github.forms import GithubIntegrationForm
-    from lifemonitor.integrations.github.settings import SCOPES
+    from lifemonitor.api.models.services.github import SCOPES
     # initialize the form
     form = GithubIntegrationForm()
     try:
