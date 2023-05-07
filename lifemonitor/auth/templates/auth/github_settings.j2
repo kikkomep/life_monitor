@@ -26,19 +26,19 @@
 <form id="enableGhIntegrationForm" method="POST" action="{{ url_for('auth.enable_github_integration') }}">
 
     <!-- Enable integration -->    
-    <div class="form-group row text-right px-3 mb-n2">
-        <div class="col-11 my-auto">
+    <div class="form-group text-right px-3 mb-n2">
+        <div class="d-inline-block mx-2">
             <small class="form-text text-muted">
                 Enable integration
             </small>
         </div>
-        <div class="col-1">
+        <div class="d-inline-block">
             {% set enable_integration = "Toggle off to disable GitHub integration" %}
             {% set disable_integration = "Toggle on to enable GitHub integration" %}
             <div class="checkbox" data-toggle="tooltip" data-placement="top" tooltip-on="{{enable_integration}}"
                 tooltip-off="{{disable_integration}}"
                 title="{{ enable_integration if githubIntegrationForm.enable_integration.data else disable_integration }}">
-                <input id="enable-gh-toggle" class="mx-3"
+                <input id="enable-gh-toggle" class="mx-1"
                     type="checkbox" name="{{githubIntegrationForm.enable_integration.name}}"
                     onchange="enableGhIntegration()"
                     value="{{githubIntegrationForm.enable_integration.data}}" data-toggle="toggle" {% if
