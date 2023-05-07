@@ -209,6 +209,23 @@ class LifeMonitorGithubApp(GithubApp):
             logger.debug("Installation '%s' not found", installation_id)
             return None
 
+    def get_installation_by_repository(self, repository_full_name: str) -> LifeMonitorInstallation:
+        logger.debug("Searching installation for repository %r", repository_full_name)
+        repo = self.get_installation_repository(repository_full_name)
+        logger.debug("Installation Repository: %r", repo)
+        return repo.installation if repo else None
+
+    def get_installation_repository(self, repository_full_name: str) -> InstallationGithubWorkflowRepository:
+        logger.debug("Searching installation for repository %r", repository_full_name)
+        # Try to reload installations if the installation_id is not loaded
+        for installation in self.installations:
+            for repo in installation.get_repos():
+                if repo.full_name == repository_full_name:
+                    repo._installation = installation
+                    return repo
+        logger.debug("Installation Repository not found")
+        return None
+
 
 class GithubIntegration(GithubIntegrationBase):
 
@@ -306,10 +323,11 @@ class LifeMonitorInstallation(Installation.Installation):
                 self._requester, {}, {"url": url}, completed=False, ref=ref, rev=rev
             )
         headers, data = self._requester.requestJsonAndCheck("GET", url)
-        return InstallationGithubWorkflowRepository(self._requester, headers, data, completed=True, ref=ref, rev=rev)
+        return InstallationGithubWorkflowRepository(self._requester, headers, data, completed=True, ref=ref, rev=rev, installation=self)
 
     def get_repos(self) -> List[InstallationGithubWorkflowRepository]:
         url_parameters = dict()
+        # TODO: add link to the current installation
         return PaginatedList(
             contentClass=InstallationGithubWorkflowRepository,
             requester=self._requester,

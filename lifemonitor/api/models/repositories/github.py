@@ -161,7 +161,8 @@ class InstallationGithubWorkflowRepository(GithubRepository, WorkflowRepository)
                  attributes: Dict[str, Any], completed: bool,
                  ref: Optional[str] = None, rev: Optional[str] = None,
                  name: Optional[str] = None, license: Optional[str] = None,
-                 local_path: Optional[str] = None, auto_cleanup: bool = True) -> None:
+                 local_path: Optional[str] = None, auto_cleanup: bool = True,
+                 installation: Optional[Any] = None) -> None:
         super().__init__(requester, headers, attributes, completed)
         self._ref = ref
         self.rev = rev
@@ -172,6 +173,7 @@ class InstallationGithubWorkflowRepository(GithubRepository, WorkflowRepository)
         self._config = None
         self._name = name
         self._license = license
+        self._installation = installation
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} bound to {self.url} (ref: {self.ref}, rev: {self.rev})"
@@ -187,6 +189,10 @@ class InstallationGithubWorkflowRepository(GithubRepository, WorkflowRepository)
 
     def checkout_ref(self, ref: str, token: str = None, branch_name: str = None) -> bool:
         return checkout_ref(self.local_path, ref, auth_token=token, branch_name=branch_name)
+
+    @property
+    def installation(self) -> Any:
+        return self._installation
 
     @property
     def https_url(self) -> str:
