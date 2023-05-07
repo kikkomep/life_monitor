@@ -37,24 +37,17 @@
             {% set disable_integration = "Toggle on to enable GitHub integration" %}
             <div class="checkbox" data-toggle="tooltip" data-placement="top" tooltip-on="{{enable_integration}}"
                 tooltip-off="{{disable_integration}}"
-                title="{{ enable_integration if githubSettingsForm.enable_integration.data else disable_integration }}">
+                title="{{ enable_integration if githubIntegrationForm.enable_integration.data else disable_integration }}">
                 <input id="enable-gh-toggle" class="mx-3"
-                    type="checkbox" name="{{githubSettingsForm.enable_integration.name}}"
+                    type="checkbox" name="{{githubIntegrationForm.enable_integration.name}}"
                     onchange="enableGhIntegration()"
-                    value="{{githubSettingsForm.enable_integration.data}}" data-toggle="toggle" {% if
-                    githubSettingsForm.enable_integration.data %}checked{% endif%} data-on="on" data-off='off'>
+                    value="{{githubIntegrationForm.enable_integration.data}}" data-toggle="toggle" {% if
+                        githubIntegrationForm.enable_integration.data %}checked{% endif%} data-on="on" data-off='off'>
             </div>
         </div>            
     </div>
     
-    <input type="hidden" name="{{ githubSettingsForm.all_branches.name }}" value="{{ githubSettingsForm.all_branches.data }}">
-    <input type="hidden" name="{{ githubSettingsForm.all_tags.name }}" value="{{ githubSettingsForm.all_tags.data }}">
-    <input type="hidden" name="{{ githubSettingsForm.branches.name }}" value="{{ githubSettingsForm.branches.data }}">
-    <input type="hidden" name="{{ githubSettingsForm.tags.name }}" value="{{ githubSettingsForm.tags.data }}">
-    <input type="hidden" name="{{ githubSettingsForm.check_issues.name }}" value="{{ githubSettingsForm.check_issues.data }}">
-    <input type="hidden" name="{{ githubSettingsForm.periodic_builds.name }}" value="{{ githubSettingsForm.periodic_builds.data }}">
-    
-    {{ githubSettingsForm.hidden_tag() }}
+    {{ githubIntegrationForm.hidden_tag() }}
 </form>
 
 
