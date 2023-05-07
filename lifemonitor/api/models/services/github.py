@@ -38,6 +38,7 @@ from github.WorkflowRun import WorkflowRun
 import lifemonitor.api.models as models
 import lifemonitor.exceptions as lm_exceptions
 from lifemonitor.cache import Timeout, cached
+from lifemonitor.auth.models import Scope
 from lifemonitor.integrations.github.utils import (CachedPaginatedList,
                                                    GithubApiWrapper)
 
@@ -45,6 +46,27 @@ from .service import TestingService
 
 # set module level logger
 logger = logging.getLogger(__name__)
+
+
+class SCOPES:
+
+    # minimal scope to get the user identity
+    IDENTITY = Scope("read:user,user:email", "identity")
+    # scope to read repositories and update webhooks
+    REPO_READ = Scope("read:user,user:email,admin:repo_hook,workflow", "repo_read")
+    # scope to write repositories and packages
+    REPO_WRITE = Scope("repo,user:email,write:packages", "repo_write")
+
+    # list of scope labels
+    names = [s.name for s in [IDENTITY, REPO_READ, REPO_WRITE]]
+
+    # map scope name to scope object
+    scopesMap = {s.name: s for s in [IDENTITY, REPO_READ, REPO_WRITE]}
+
+    # get scope object from scope name
+    @staticmethod
+    def get_scope(name: str) -> Scope:
+        return SCOPES.scopesMap[name]
 
 
 class GithubTestingService(TestingService):
@@ -420,7 +442,6 @@ class GithubTestingService(TestingService):
 
                 # if the GitHub App token is not available, try to get the user token
                 if not token:
-                    from lifemonitor.integrations.github.settings import SCOPES
                     token = user.github_settings.get_token(SCOPES.REPO_WRITE.name)['access_token']
 
                 # if the token is not available, notify the user

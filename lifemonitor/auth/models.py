@@ -30,7 +30,7 @@ import string
 import urllib
 import uuid as _uuid
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
 from flask import current_app
@@ -945,3 +945,18 @@ class ExternalServiceAccessToken(ExternalServiceAccessAuthorization, OAuth2Token
     @staticmethod
     def check_token_expiration(expires_at) -> bool:
         return datetime.utcnow().timestamp() - expires_at > 0
+
+
+class Scope:
+    def __init__(self, oauth_scopes: str, name: Optional[str]) -> None:
+        assert oauth_scopes, "Invalid oauth scopes"
+        self.name = name or oauth_scopes.replace(":", "_").replace(",", "_")
+        self.oauth_scopes = oauth_scopes
+
+    @property
+    def scopes(self) -> List[str]:
+        return self.oauth_scopes.split(",")
+
+    @property
+    def encoded_scopes(self) -> str:
+        return "+".join(self.scopes)
