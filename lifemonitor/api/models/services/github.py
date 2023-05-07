@@ -26,12 +26,6 @@ from typing import List, Optional, Tuple
 from urllib.error import URLError
 from urllib.parse import urlparse
 
-import lifemonitor.api.models as models
-import lifemonitor.exceptions as lm_exceptions
-from lifemonitor.cache import Timeout, cached
-from lifemonitor.integrations.github.utils import (CachedPaginatedList,
-                                                   GithubApiWrapper)
-
 import github
 from github import GithubException
 from github import \
@@ -40,6 +34,12 @@ from github.GithubException import UnknownObjectException
 from github.Repository import Repository
 from github.Workflow import Workflow
 from github.WorkflowRun import WorkflowRun
+
+import lifemonitor.api.models as models
+import lifemonitor.exceptions as lm_exceptions
+from lifemonitor.cache import Timeout, cached
+from lifemonitor.integrations.github.utils import (CachedPaginatedList,
+                                                   GithubApiWrapper)
 
 from .service import TestingService
 
@@ -394,7 +394,45 @@ class GithubTestingService(TestingService):
             if last_build:
                 run: WorkflowRun = last_build._metadata
                 assert isinstance(run, WorkflowRun)
-                return run.rerun()
+                # set reference to the workflow version
+                workflow_version = test_instance.test_suite.workflow_version
+                # temporary workaround to use the user token
+                import requests
+                user = workflow_version.submitter
+                if not user:
+                    logger.warning("No user found")
+                    return False
+                # detect if the version is based on a GitHub repository
+                _, repo_fullname, _ = self._parse_workflow_url(test_instance.resource)
+                # declare token variable
+                token = None
+                # try to get token from GitHub App
+                try:
+                    from lifemonitor.integrations.github.app import \
+                        LifeMonitorGithubApp
+                    gh_app = LifeMonitorGithubApp.get_instance()
+                    installation = gh_app.get_installation_by_repository(repo_fullname)
+                    if installation:
+                        token = installation.auth.token
+                        logger.debug(f"Token provided by installation {installation.id}")
+                except Exception as e:
+                    logger.exception(e)
+
+                # if the GitHub App token is not available, try to get the user token
+                if not token:
+                    from lifemonitor.integrations.github.settings import SCOPES
+                    token = user.github_settings.get_token(SCOPES.REPO_WRITE.name)['access_token']
+
+                # if the token is not available, notify the user
+                if not token:
+                    logger.warning("Unable to find a valid token")
+                else:  # if the token is available, try to schedule a new run
+                    headers = {'Authorization': f"Bearer {token}"}
+                    response = requests.post(run.rerun_url, data={}, headers=headers)
+                    logger.debug(f"Response: {response}")
+                    result = response.status_code in (200, 201, 202)
+                    logger.debug(f"Test build scheduled: {result}")
+                    return result
             else:
                 workflow = self._get_gh_workflow_from_test_instance_resource(test_instance.resource)
                 assert isinstance(workflow, Workflow), workflow
