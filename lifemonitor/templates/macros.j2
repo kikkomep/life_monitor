@@ -111,7 +111,8 @@
 {% if tooltip_off %} tooltip-off="{{tooltip_off}}" {%endif%}
 {% if tooltip_on and not disabled %} title="{{tooltip_on}}" {%endif%}
 {% if tooltip_off and disabled %} title="{{tooltip_off}}" {%endif%}
-data-toggle="tooltip" data-placement="{{tooltipPlacement}}">
+  {% if not disabled %}data-toggle="tooltip"{% endif %}
+  data-placement="{{tooltipPlacement}}">
   <div id="{{field.name}}-container" class="input-group">
     <input id="{{field.name}}" type="{{ field.name if field.name != 'repeat_password' else 'password' }}"
           name="{{ field.name }}" 
