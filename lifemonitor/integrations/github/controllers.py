@@ -56,7 +56,7 @@ from lifemonitor.integrations.github.utils import delete_branch
 from lifemonitor.integrations.github.wizards import GithubWizard
 from lifemonitor.tasks import Scheduler
 from lifemonitor.utils import (bool_from_string, get_git_repo_revision,
-                               match_ref)
+                               match_ref, notify_workflow_version_updates)
 
 from . import services
 
@@ -71,22 +71,24 @@ def ping(event: GithubEvent):
 
 def refresh_workflow_builds(event: GithubEvent):
     try:
+        logger.debug("Processing workflow run event: %r", event)
 
-        logger.debug("Workflow run event: %r", event)
-
+        # reference to the installation
         installation = event.installation
         logger.debug("Installation: %r", installation)
 
+        # reference to the repository
         repo_info = event.repository_reference
         logger.debug("Repo reference: %r", repo_info)
-
         repo: GithubWorkflowRepository = repo_info.repository
         logger.debug("Repository: %r", repo)
 
+        # reference to the workflow
         github_workflow = event.workflow
         logger.debug("Github Workflow: %r (name: %s, path: %s)",
                      github_workflow, github_workflow.name, github_workflow.path)
 
+        # reference to the workflow run
         github_workflow_run = event.workflow_run
         logger.debug("Github Workflow: %r", github_workflow_run)
 
@@ -108,16 +110,26 @@ def refresh_workflow_builds(event: GithubEvent):
         instances = TestInstance.find_by_resource(workflow_resource)
         logger.debug("Instances: %r", instances)
 
+        # initialize the list of updated workflow versions
+        updated_workflow_versions = set()
+
+        # update the build of the workflow version
         with cache.cache.transaction():
             for i in instances:
                 workflow_version = i.test_suite.workflow_version
+                logger.warning("Check if workflow version has to be processed: %r", workflow_version.version in refs)
                 if workflow_version.version in refs or (not workflow_version.has_revision() and not workflow_version.next_version):
-                    logger.warning("Version %r to uodate", workflow_version)
+                    logger.warning("Version %r to update", workflow_version)
                     i.get_test_build(f"{github_workflow_run.id}_{github_workflow_run.raw_data['run_attempt']}")
+                    # recalculate the status of the workflow version
                     i.test_suite.workflow_version.status
+                    # save the workflow version
+                    workflow_version.save()
+                    updated_workflow_versions.add(workflow_version)
                 else:
                     logger.warning("Skipping instance %r not bound to the current branch or tag", i)
-        return f"Test instance related with resource '{workflow_resource}' updated", 200
+        notify_workflow_version_updates(list(updated_workflow_versions), type='sync', delay=2)
+        return f"Test build related with resource '{workflow_resource}' updated", 200
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):
             logger.exception(e)
