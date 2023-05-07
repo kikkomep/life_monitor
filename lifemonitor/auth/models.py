@@ -36,15 +36,16 @@ from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
 from flask import current_app
 from flask_bcrypt import check_password_hash, generate_password_hash
 from flask_login import AnonymousUserMixin, UserMixin
-from lifemonitor import exceptions as lm_exceptions
-from lifemonitor import utils as lm_utils
-from lifemonitor.db import db
-from lifemonitor.models import JSON, UUID, IntegerSet, ModelMixin
 from sqlalchemy import null
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.mutable import MutableSet
 from sqlalchemy.orm.exc import NoResultFound
+
+from lifemonitor import exceptions as lm_exceptions
+from lifemonitor import utils as lm_utils
+from lifemonitor.db import db
+from lifemonitor.models import JSON, UUID, IntegerSet, ModelMixin
 
 # Set the module level logger
 logger = logging.getLogger(__name__)
