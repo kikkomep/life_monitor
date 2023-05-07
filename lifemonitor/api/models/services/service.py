@@ -183,7 +183,7 @@ class TestingService(db.Model, ModelMixin):
     def get_test_builds(self, test_instance: models.TestInstance, limit: int = 10) -> list:
         raise lm_exceptions.NotImplementedException()
 
-    def start_test_build(self, test_instance: models.TestInstance) -> bool:
+    def start_test_build(self, test_instance: models.TestInstance, build_number: int = None) -> bool:
         raise lm_exceptions.NotImplementedException()
 
     def get_test_builds_as_dict(self, test_instance: models.TestInstance, test_output) -> Dict[str, Any]:
