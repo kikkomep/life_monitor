@@ -90,8 +90,14 @@ def refresh_workflow_builds(event: GithubEvent):
         github_workflow_run = event.workflow_run
         logger.debug("Github Workflow: %r", github_workflow_run)
 
+        # the current implementation of get_git_repo_revision seems to be not able to retrieve
+        # all the refs of the workflow run (i.e., the tag refs are missing)
+        # As a workaround, we use the github API to retrieve the refs of the workflow run
+        # we extend the refs returned by get_git_repo_revision with the ref which the workflow run is related to
+        refs = set([github_workflow_run.raw_data['head_branch']])
         repo_revision = get_git_repo_revision(repo.local_repo.local_path, github_workflow_run.raw_data['head_sha'])
-        refs = [_['ref'].split('/')[-1] for _ in repo_revision['refs']]
+        logger.debug("Repo revision: %r", repo_revision)
+        refs.union([_['ref'].split('/')[-1] for _ in repo_revision['refs']])
         logger.debug("REFS: %r", refs)
 
         workflow_name = github_workflow.path.replace('.github/workflows/', '')
