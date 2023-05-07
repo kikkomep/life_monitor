@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 import logging
+import random
 
 import connexion
 import flask
@@ -391,11 +392,164 @@ def update_notifications_switch():
 def update_github_settings():
     logger.debug("Updating Github Settings")
     from lifemonitor.integrations.github.forms import GithubSettingsForm
+    from lifemonitor.integrations.github.settings import SCOPES
+    # initialize the form
     form = GithubSettingsForm()
-    if not form.validate_on_submit():
-        return redirect(url_for('auth.profile', githubSettingsForm=form, currentView='githubSettingsTab'))
-    form.update_model(current_user)
-    current_user.save()
+
+    # if the request is a POST
+    if request.method == "POST":
+        logger.debug("POST request")
+        # validate the form
+        if not form.validate_on_submit():
+            return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
+
+        # check if the periodic builds have been updated
+        periodic_builds_updated = current_user.github_settings.periodic_builds != form.periodic_builds.data
+        logger.debug("Periodic builds updated: %r", periodic_builds_updated)
+
+        # check if issues checkbox has been updated
+        issues_updated = current_user.github_settings.check_issues != form.check_issues.data
+        logger.debug("Issues updated: %r", issues_updated)
+
+        # update the model using the form data
+        form.update_model(current_user)
+        # update the model
+        current_user.save()
+
+        # notify the user about the issues enabling status
+        if issues_updated:
+            if current_user.github_settings.check_issues:
+                flash("Issues Check enabled", category="success")
+            else:
+                flash("Issues Check disabled", category="error")
+
+        # notify the user about the periodic builds enabling status
+        if periodic_builds_updated:
+            if current_user.github_settings.periodic_builds:
+                logger.debug("Update authorization required? %r", current_user.github_settings.periodic_builds)
+                # generate a new nonce as a random number (10 digits)
+                nonce = random.randint(1000000000, 9999999999)
+                # store the nonce in the session
+                session['lm_github_periodic_builds_nonce'] = str(nonce)
+                # save form data in the session
+                session['lm_github_periodic_builds_form_data'] = form.to_json()
+                # redirect to the authorization page
+                redirect_url = f'/oauth2/login/github?scope={SCOPES.REPO_WRITE.encoded_scopes}&next=/account/enable_periodic_builds?state={nonce}'
+                logger.warning("Redirecting to %r", redirect_url)
+                return redirect(redirect_url)
+            else:
+                flash("Periodic builds disabled", category="error")
+
+    # if the request is different from POST, just render the form
+    return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
+
+
+@blueprint.route("/enable_periodic_builds", methods=("GET",))
+@login_required
+def enable_periodic_builds():
+    from lifemonitor.integrations.github.forms import GithubSettingsForm
+
+    try:
+        # if the request is GET
+        if request.method == "GET":
+            # get the nonce from the session
+            nonce = session.pop('lm_github_periodic_builds_nonce', None)
+            logger.error("Nonce: %r", nonce)
+            # get the code from the request
+            code = request.args.get('state', None)
+            logger.error("Code: %r", code)
+            # get form data from the session
+            form_data = session.pop('lm_github_periodic_builds_form_data', None)
+            form = GithubSettingsForm.from_json(form_data)
+            # check if the request has a valid code (nonce)
+            if not nonce or not code or nonce != code or not form:
+                # if the request is different from POST, just render the form
+                flash("Invalid request", category="error")
+            else:
+                github_user_identity = current_user.oauth_identity['github']
+                logger.debug("Updated token: %r", github_user_identity.token)
+                assert github_user_identity, f"No GitHub identity found for user {current_user}"
+                assert github_user_identity.token, f"No GitHub token found for user {current_user}"
+                # update the model using the form data
+                form.update_model(current_user)
+                current_user.save()
+                flash("Periodic builds enabled", category="success")
+    except Exception as e:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
+        # if the request is different from POST, just render the form
+        flash("Something went wrong", category="error")
+
+    # set a fallback redirect
+    return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
+
+
+@blueprint.route("/enable_github_integration", methods=("GET", "POST"))
+@login_required
+def enable_github_integration():
+    from lifemonitor.integrations.github.forms import GithubSettingsForm
+    from lifemonitor.integrations.github.settings import SCOPES
+    # initialize the form
+    form = GithubSettingsForm()
+    try:
+        if request.method == "POST":
+            # validate the form
+            if not form.validate_on_submit():
+                flash("Invalid request", category="error")
+                return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
+
+            # determine if a new authorization is required
+            update_authorization = not current_user.github_settings.enable_integration
+            logger.debug("Update authorization required? %r", update_authorization)
+            if update_authorization:
+                # generate a new nonce as a random number (10 digits)
+                nonce = random.randint(1000000000, 9999999999)
+                # store the nonce in the session
+                session['lm_github_integration_nonce'] = str(nonce)
+                # redirect to the authorization page
+                redirect_url = f'/oauth2/login/github?scope={SCOPES.REPO_READ.encoded_scopes}&next=/account/enable_github_integration?state={nonce}'
+                logger.warning("Redirecting to %r", redirect_url)
+                return redirect(redirect_url)
+
+            # update the model using the form data
+            form.update_model(current_user)
+            # update the model
+            current_user.save()
+            # notify the user
+            if current_user.github_settings.enable_integration:
+                flash("GitHub Integration enabled", category="success")
+            else:
+                flash("GitHub Integration disabled", category="error")
+
+        # if the request is GET
+        if request.method == "GET":
+            # get the nonce from the session
+            nonce = session.pop('lm_github_integration_nonce', None)
+            logger.error("Nonce: %r", nonce)
+            # get the code from the request
+            code = request.args.get('state', None)
+            logger.error("Code: %r", code)
+            # check if the request has a valid code (nonce)
+            if not nonce or not code or nonce != code:
+                # if the request is different from POST, just render the form
+                flash("Invalid request", category="error")
+            else:
+                github_user_identity = current_user.oauth_identity['github']
+                logger.debug("Updated token: %r", github_user_identity.token)
+                assert github_user_identity, f"No GitHub identity found for user {current_user}"
+                assert github_user_identity.token, f"No GitHub token found for user {current_user}"
+                current_user.github_settings.enable_integration = True
+                current_user.save()
+                flash("GitHub Integration Enabled", category="success")
+    except Exception as e:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception(e)
+        # if the request is different from POST, just render the form
+        flash("Something went wrong", category="error")
+
+    # update the form using the model data
+    form.from_model(current_user)
+    # set a fallback redirect
     return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
 
 
