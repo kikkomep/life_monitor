@@ -21,28 +21,67 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm.attributes import flag_modified
 
 from lifemonitor.auth.models import User
+from lifemonitor.auth.oauth2.client.models import OAuth2Token
 from lifemonitor.utils import match_ref
 
 # Config a module level logger
 logger = logging.getLogger(__name__)
 
 
+class Scope:
+    def __init__(self, oauth_scopes: str, name: Optional[str]) -> None:
+        assert oauth_scopes, "Invalid oauth scopes"
+        self.name = name or oauth_scopes.replace(":", "_").replace(",", "_")
+        self.oauth_scopes = oauth_scopes
+
+    @property
+    def scopes(self) -> List[str]:
+        return self.oauth_scopes.split(",")
+
+    @property
+    def encoded_scopes(self) -> str:
+        return "+".join(self.scopes)
+
+
+class SCOPES:
+
+    # minimal scope to get the user identity
+    IDENTITY = Scope("read:user,user:email", "identity")
+    # scope to read repositories and update webhooks
+    REPO_READ = Scope("read:user,user:email,admin:repo_hook,workflow", "repo_read")
+    # scope to write repositories and packages
+    REPO_WRITE = Scope("repo,user:email,write:packages", "repo_write")
+
+    # list of scope labels
+    names = [s.name for s in [IDENTITY, REPO_READ, REPO_WRITE]]
+
+    # map scope name to scope object
+    scopesMap = {s.name: s for s in [IDENTITY, REPO_READ, REPO_WRITE]}
+
+    # get scope object from scope name
+    @staticmethod
+    def get_scope(name: str) -> Scope:
+        return SCOPES.scopesMap[name]
+
+
 class GithubUserSettings():
 
     DEFAULTS = {
         "check_issues": True,
+        "periodic_builds": True,
         "public": True,
         "all_branches": True,
         "all_tags": True,
         "branches": ["main"],
         "tags": ["v*.*.*"],
         "registries": [],
-        "installations": {}
+        "installations": {},
+        "enable_integration": False
     }
 
     def __init__(self, user: User) -> None:
@@ -64,6 +103,44 @@ class GithubUserSettings():
     def check_issues(self, value: bool):
         self._raw_settings['check_issues'] = value
         flag_modified(self.user, 'settings')
+
+    @property
+    def enable_integration(self) -> bool:
+        return self._raw_settings.get('enable_integration', self.DEFAULTS['enable_integration'])
+
+    @enable_integration.setter
+    def enable_integration(self, value: bool):
+        self._raw_settings['enable_integration'] = value
+        flag_modified(self.user, 'settings')
+
+    @property
+    def periodic_builds(self) -> bool:
+        return self._raw_settings.get('periodic_builds', self.DEFAULTS['periodic_builds'])
+
+    @periodic_builds.setter
+    def periodic_builds(self, value: bool):
+        self._raw_settings['periodic_builds'] = value
+        flag_modified(self.user, 'settings')
+
+    def get_token(self, label: str) -> Optional[OAuth2Token]:
+        try:
+            # map label to token scope
+            token_scope = SCOPES.get_scope(label).oauth_scopes
+            logger.debug(f"Token scope for registry '{label}': {token_scope}")
+            user_identity = self.user.oauth_identity['github']
+            logger.debug(f"GitHub user identity: {user_identity}")
+            token = user_identity.get_token(token_scope)
+            return OAuth2Token(token) if token else None
+        except KeyError as e:
+            logger.debug("Unable to find github token: %r", str(e))
+            return None
+
+    def get_tokens(self) -> Dict[str, OAuth2Token]:
+        return {label: self.get_token(label) for label in SCOPES.names}
+
+    @property
+    def auth_scopes(self) -> Dict[str, str]:
+        return self._raw_settings.get('auth_scopes', {}).copy()
 
     @property
     def all_branches(self) -> bool:
