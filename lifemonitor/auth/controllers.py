@@ -168,7 +168,8 @@ def index():
 
 @blueprint.route("/profile", methods=("GET",))
 def profile(form=None, passwordForm=None, currentView=None,
-            emailForm=None, notificationsForm=None, githubSettingsForm=None, registrySettingsForm=None):
+            emailForm=None, notificationsForm=None,
+            githubIntegrationForm=None, githubSettingsForm=None, registrySettingsForm=None):
     currentView = currentView or request.args.get("currentView", 'accountsTab')
     logger.debug(OpenApiSpecs.get_instance().authorization_code_scopes)
     back_param = request.args.get('back', None)
@@ -182,7 +183,7 @@ def profile(form=None, passwordForm=None, currentView=None,
         session['lm_back_param'] = back_param
         logger.debug("detected back param: %s", back_param)
     from lifemonitor.api.models.registries.forms import RegistrySettingsForm
-    from lifemonitor.integrations.github.forms import GithubSettingsForm
+    from lifemonitor.integrations.github.forms import GithubSettingsForm, GithubIntegrationForm
     logger.warning("Request args: %r", request.args)
     return render_template("auth/profile.j2",
                            passwordForm=passwordForm or SetPasswordForm(),
@@ -192,6 +193,7 @@ def profile(form=None, passwordForm=None, currentView=None,
                            enableRegistryIntegration=boolean_value(current_app.config['ENABLE_REGISTRY_INTEGRATION']),
                            oauth2ClientForm=form or Oauth2ClientForm(),
                            githubSettingsForm=githubSettingsForm or GithubSettingsForm.from_model(current_user),
+                           githubIntegrationForm=githubIntegrationForm or GithubIntegrationForm.from_model(current_user),
                            registrySettingsForm=registrySettingsForm or RegistrySettingsForm.from_model(current_user),
                            providers=get_providers(), currentView=currentView,
                            oauth2_generic_client_scopes=OpenApiSpecs.get_instance().authorization_code_scopes,
@@ -486,10 +488,10 @@ def enable_periodic_builds():
 @blueprint.route("/enable_github_integration", methods=("GET", "POST"))
 @login_required
 def enable_github_integration():
-    from lifemonitor.integrations.github.forms import GithubSettingsForm
+    from lifemonitor.integrations.github.forms import GithubIntegrationForm
     from lifemonitor.integrations.github.settings import SCOPES
     # initialize the form
-    form = GithubSettingsForm()
+    form = GithubIntegrationForm()
     try:
         if request.method == "POST":
             # validate the form

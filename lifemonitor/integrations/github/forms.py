@@ -37,6 +37,32 @@ from .settings import GithubUserSettings
 logger = logging.getLogger(__name__)
 
 
+class GithubIntegrationForm(FlaskForm):
+
+    enable_integration = BooleanField(
+        "enable_integration",
+        validators=[AnyOf([True, False])]
+    )
+
+    def update_model(self, user: User) -> GithubUserSettings:
+        assert user and not user.is_anonymous, user
+        settings = GithubUserSettings(user) \
+            if not user.github_settings else user.github_settings
+        settings.enable_integration = self.enable_integration.data
+        logger.error("Settings: %r", settings)
+        return settings
+
+    @classmethod
+    def from_model(cls, user: User) -> GithubSettingsForm:
+        if user.is_anonymous:
+            return None
+        settings = GithubUserSettings(user) \
+            if not user.github_settings else user.github_settings
+        form = cls()
+        form.enable_integration.data = settings.enable_integration
+        return form
+
+
 class GithubSettingsForm(FlaskForm):
     branches = StringField(
         "branches",
