@@ -182,10 +182,25 @@ def profile(form=None, passwordForm=None, currentView=None,
         back_param = back_param or session.get('lm_back_param', None)
         session['lm_back_param'] = back_param
         logger.debug("detected back param: %s", back_param)
+    # initialize forms
     from lifemonitor.api.models.registries.forms import RegistrySettingsForm
     from lifemonitor.integrations.github.forms import GithubSettingsForm, GithubIntegrationForm
+    from lifemonitor.integrations.github.app import LifeMonitorGithubApp
+    # retrieve the Github App URL
+    gh_app_url = None
+    try:
+        gh_app = LifeMonitorGithubApp.get_instance()
+        logger.debug("Github App: %r", gh_app)
+        gh_app_url = None
+        if gh_app:
+            gh_app_url = gh_app.html_url
+            logger.debug("Github App URL: %r", gh_app_url)
+    except Exception as e:
+        logger.error("Unable to get Github App URL: %r", e)
+
     logger.warning("Request args: %r", request.args)
     return render_template("auth/profile.j2",
+                           githubAppUrl=gh_app_url,
                            passwordForm=passwordForm or SetPasswordForm(),
                            emailForm=emailForm or EmailForm(),
                            notificationsForm=notificationsForm or NotificationsForm(),
