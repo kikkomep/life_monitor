@@ -67,7 +67,7 @@ def handle_event(event):
             if logger.isEnabledFor(logging.DEBUG):
                 logger.exception(ex)
 
-    logger.warning("No handler for GitHub event: %r", event_object.type)
+    logger.warning("No handler for GitHub event: %r", e.type)
 
 
 @schedule(trigger=CronTrigger(minute=0, hour=4),

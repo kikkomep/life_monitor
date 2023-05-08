@@ -291,7 +291,7 @@ class LifeMonitorInstallation(Installation.Installation):
             now = datetime.now(timezone.utc)
             expires_at = jwt.utils.get_time_from_int(self.app.integration.current_jwt['exp'])
             logger.debug("Checking token expiration: now=%r, expires_at=%r, expired: %r",
-                           now, expires_at, expires_at <= now)
+                         now, expires_at, expires_at <= now)
             if expires_at <= now:
                 generate_token = True
         if generate_token:
