@@ -50,10 +50,23 @@
     {{ githubIntegrationForm.hidden_tag() }}
 </form>
 
+<div class="{%if integration_disabled %}card-disabled{% endif %}">
 
-<div class="card-header {% if integration_disabled %}disabled" style="opacity: 0.5;" {% endif %}">
-    <h3 class="card-title"><b>Global Settings</b></h3>
-</div>
+    {% if githubAppUrl %}
+    <div class="card-header">
+        <h3 class="card-title"><b>LifeMonitor GitHub App</b></h3>
+    </div>
+
+    <div class="card-body">
+        The management page of the LifeMonitor GitHub App is available at 
+        <a data-toggle="tooltip" title="LifeMonitor GitHub App Management Page" href="{{githubAppUrl}}" target="_blank">{{githubAppUrl}}</a>
+        <span class="ml-1">[<a data-toggle="tooltip" title="LifeMonitor GitHub App Documentation" href="https://lifemonitor.eu/lm_wft_best_practices_github_app#github-app-management-page" target="_blank">docs</a>]</span>.
+    </div>
+    {% endif %}
+
+    <div class="card-header">
+        <h3 class="card-title"><b>Global Settings</b></h3>
+    </div>
 
 
 <div class="card-body {% if integration_disabled %}disabled" style="opacity: 0.5;" {% endif %}">
