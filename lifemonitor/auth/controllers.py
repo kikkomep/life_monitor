@@ -408,7 +408,6 @@ def update_notifications_switch():
 def update_github_settings():
     logger.debug("Updating Github Settings")
     from lifemonitor.integrations.github.forms import GithubSettingsForm
-    from lifemonitor.api.models.services.github import SCOPES
     # initialize the form
     form = GithubSettingsForm()
 
@@ -442,17 +441,20 @@ def update_github_settings():
         # notify the user about the periodic builds enabling status
         if periodic_builds_updated:
             if current_user.github_settings.periodic_builds:
-                logger.debug("Update authorization required? %r", current_user.github_settings.periodic_builds)
-                # generate a new nonce as a random number (10 digits)
-                nonce = random.randint(1000000000, 9999999999)
-                # store the nonce in the session
-                session['lm_github_periodic_builds_nonce'] = str(nonce)
-                # save form data in the session
-                session['lm_github_periodic_builds_form_data'] = form.to_json()
-                # redirect to the authorization page
-                redirect_url = f'/oauth2/login/github?scope={SCOPES.REPO_WRITE.encoded_scopes}&next=/account/enable_periodic_builds?state={nonce}'
-                logger.warning("Redirecting to %r", redirect_url)
-                return redirect(redirect_url)
+                flash("Periodic builds enabled", category="success")
+                # from lifemonitor.api.models.services.github import SCOPES
+                # uncomment to retrieve the authorization to run builds with the user token
+                # logger.debug("Update authorization required? %r", current_user.github_settings.periodic_builds)
+                # # generate a new nonce as a random number (10 digits)
+                # nonce = random.randint(1000000000, 9999999999)
+                # # store the nonce in the session
+                # session['lm_github_periodic_builds_nonce'] = str(nonce)
+                # # save form data in the session
+                # session['lm_github_periodic_builds_form_data'] = form.to_json()
+                # # redirect to the authorization page
+                # redirect_url = f'/oauth2/login/github?scope={SCOPES.REPO_WRITE.encoded_scopes}&next=/account/enable_periodic_builds?state={nonce}'
+                # logger.warning("Redirecting to %r", redirect_url)
+                # return redirect(redirect_url)
             else:
                 flash("Periodic builds disabled", category="error")
 
