@@ -25,7 +25,6 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm.attributes import flag_modified
 
-from lifemonitor.api.models.services.github import SCOPES
 from lifemonitor.auth.models import User
 from lifemonitor.auth.oauth2.client.models import OAuth2Token
 from lifemonitor.utils import match_ref
@@ -90,6 +89,7 @@ class GithubUserSettings():
     def get_token(self, label: str) -> Optional[OAuth2Token]:
         try:
             # map label to token scope
+            from lifemonitor.api.models.services.github import SCOPES
             token_scope = SCOPES.get_scope(label).oauth_scopes
             logger.debug(f"Token scope for registry '{label}': {token_scope}")
             user_identity = self.user.oauth_identity['github']
@@ -101,6 +101,7 @@ class GithubUserSettings():
             return None
 
     def get_tokens(self) -> Dict[str, OAuth2Token]:
+        from lifemonitor.api.models.services.github import SCOPES
         return {label: self.get_token(label) for label in SCOPES.names}
 
     @property
