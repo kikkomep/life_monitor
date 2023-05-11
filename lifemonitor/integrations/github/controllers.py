@@ -226,9 +226,8 @@ def installation_repositories(event: GithubEvent):
                     if not repo_info.ref or repo_info.deleted:
                         logger.debug("Repo ref not defined or branch/tag deleted: %r", repo)
                     else:
-                        settings: GithubUserSettings = event.sender.user.github_settings
-                        __check_for_issues_and_register__(repo_info, settings,
-                                                          event.sender.user.registry_settings, True)
+                        __check_for_issues_and_register__(repo_info, event.sender_as_user,
+                                                          event.sender_as_user.registry_settings, True)
 
         elif event.action == 'deleted':
             installation = event.installation
@@ -244,6 +243,7 @@ def installation_repositories(event: GithubEvent):
 
 
 def __notify_workflow_version_event__(repo_reference: GithubRepositoryReference,
+                                      user: User,
                                       workflow_version: Union[WorkflowVersion, Dict],
                                       action: str):
     try:
@@ -267,16 +267,12 @@ def __notify_workflow_version_event__(repo_reference: GithubRepositoryReference,
         logger.debug("Notifications enabled: %r", notification_enabled)
         if notification_enabled:
             logger.debug(f"Setting notification for action '{action}' on repo '{repo.full_name}' (ref: {repo.ref})")
-            identity = OAuthIdentity.find_by_provider_user_id(str(repo.owner.id), "github")
-            if identity:
-                version = workflow_version if isinstance(workflow_version, dict) else serializers.WorkflowVersionSchema(exclude=('meta', 'links')).dump(workflow_version)
-                repo_data = repo.raw_data
-                repo_data['ref'] = repo.ref
-                n = GithubWorkflowVersionNotification(workflow_version=version, repository=repo_data, action=action, users=[identity.user])
-                n.save()
-                logger.debug(f"Setting notification for action '{action}' on repo '{repo.full_name}' (ref: {repo.ref})")
-            else:
-                logger.warning("Unable to find user identity associated to repo: %r", repo)
+            version = workflow_version if isinstance(workflow_version, dict) else serializers.WorkflowVersionSchema(exclude=('meta', 'links')).dump(workflow_version)
+            repo_data = repo.raw_data
+            repo_data['ref'] = repo.ref
+            n = GithubWorkflowVersionNotification(workflow_version=version, repository=repo_data, action=action, users=[user])
+            n.save()
+            logger.debug(f"Setting notification for action '{action}' on repo '{repo.full_name}' (ref: {repo.ref})")
         else:
             logger.warning("Notification disabled for %r (ref %r)", repo_reference.full_name, pattern)
     except Exception as e:
@@ -378,7 +374,7 @@ def __forward_event__(event: GithubEvent) -> Optional[Dict]:
 
 
 def __check_for_issues_and_register__(repo_info: GithubRepositoryReference,
-                                      github_settings: GithubUserSettings,
+                                      sender: User,
                                       registry_settings: RegistrySettings,
                                       check_issues: bool = True):
     # enable/disable registry integration according to settings
@@ -386,6 +382,8 @@ def __check_for_issues_and_register__(repo_info: GithubRepositoryReference,
     # set repo
     repo: GithubWorkflowRepository = repo_info.repository
     logger.debug("Repo to register: %r", repo)
+    # get user settings
+    github_settings: GithubUserSettings = sender.github_settings
     # filter branches and tags according to global and current repo settings
     if __skip_branch_or_tag__(repo_info, github_settings):
         logger.info(f"Repo branch or tag {repo_info.ref} skipped!")
@@ -406,12 +404,17 @@ def __check_for_issues_and_register__(repo_info: GithubRepositoryReference,
         registries = __config_registry_list__(repo_info, registry_settings)
         logger.debug("Registries to update: %r", registries)
         # found the existing workflow associated with repo
-        _, workflow_version = services.find_workflow_version(repo_info)
-        # register or update workflow on LifeMonitor and optionally on registries
-        registered_workflow = services.register_repository_workflow(repo_info, registries=registries)
+        _, workflow_version = services.find_workflow_version(sender, repo_info)
+        try:
+            # register or update workflow on LifeMonitor and optionally on registries
+            registered_workflow = services.register_repository_workflow(sender, repo_info, registries=registries)
+        except Exception as e:
+            logger.error("Error while registering workflow: %r", e)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
         logger.debug("Registered workflow: %r", registered_workflow)
         if registered_workflow:
-            __notify_workflow_version_event__(repo_info, registered_workflow, action='updated' if workflow_version else 'created')
+            __notify_workflow_version_event__(repo_info, sender, registered_workflow, action='updated' if workflow_version else 'created')
 
 
 def create(event: GithubEvent):
@@ -441,8 +444,8 @@ def create(event: GithubEvent):
     if repo_info.branch:
         try:
             __check_for_issues_and_register__(repo_info,
-                                              event.sender.user.github_settings,
-                                              event.sender.user.registry_settings,
+                                              event.sender_as_user,
+                                              event.sender_as_user.registry_settings,
                                               True)
         except Exception as e:
             logger.exception(e)
@@ -474,10 +477,12 @@ def delete(event: GithubEvent):
 
     if repo_info.tag or repo_info.branch:
         try:
-            workflow_version = services.delete_repository_workflow_version(repo_info,
-                                                                           registries=event.sender.user.registry_settings.registries)
+            # set a reference to the LM user which triggered the event
+            user = event.sender_as_user
+            workflow_version = services.delete_repository_workflow_version(user, repo_info,
+                                                                           registries=user.registry_settings.registries)
             if workflow_version:
-                __notify_workflow_version_event__(repo_info, workflow_version, action='deleted')
+                __notify_workflow_version_event__(repo_info, user, workflow_version, action='deleted')
         except Exception as e:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.exception(e)
@@ -508,9 +513,8 @@ def push(event: GithubEvent):
         if not repo_info.ref or repo_info.deleted:
             logger.debug("Repo ref not defined or branch/tag deleted: %r", repo)
         else:
-            settings: GithubUserSettings = event.sender.user.github_settings
-            __check_for_issues_and_register__(repo_info, settings,
-                                              event.sender.user.registry_settings, True)
+            __check_for_issues_and_register__(repo_info, event.sender_as_user,
+                                              event.sender_as_user.registry_settings, True)
 
         return "No content", 204
     except Exception as e:
