@@ -296,18 +296,12 @@ class LifeMonitorInstallation(Installation.Installation):
         self._auth: InstallationAuthorization = None
         self._gh_client = None
 
-    @property
-    def github_registry(self) -> GithubWorkflowRegistry:
-        try:
-            identity: OAuthIdentity = OAuthIdentity.find_by_provider_user_id(str(self.app.owner.id), "github")
-            registry = GithubWorkflowRegistry.find(identity.user, self.app.id, self.id)
-            if not registry:
-                registry = GithubWorkflowRegistry(identity.user, self.app.id, self.id)
-            return registry
-        except OAuthIdentityNotFoundException as e:
-            logger.warning("Github identity '%r' doesn't match with any LifeMonitor user identity", self.app.owner.id)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.exception(e)
+    def get_user_registry(self, user: User) -> GithubWorkflowRegistry:
+        assert user, "the user param is required"
+        registry = GithubWorkflowRegistry.find(user, self.app.id, self.id)
+        if not registry:
+            registry = GithubWorkflowRegistry(user, self.app.id, self.id)
+        return registry
 
     @property
     def github_client(self) -> Github:
