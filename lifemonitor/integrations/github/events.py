@@ -29,8 +29,8 @@ from flask import Request
 from flask import request as current_request
 from lifemonitor.api.models.repositories.github import (
     GithubWorkflowRepository, RepoCloneContextManager)
-from lifemonitor.auth.models import HostingService
-from lifemonitor.auth.oauth2.client.models import OAuthIdentity
+from lifemonitor.auth.models import HostingService, User
+from lifemonitor.auth.oauth2.client.models import OAuthIdentity, OAuthIdentityNotFoundException
 from lifemonitor.integrations.github.app import (LifeMonitorGithubApp,
                                                  LifeMonitorInstallation)
 from lifemonitor.integrations.github.issues import (GithubIssue,
@@ -49,7 +49,7 @@ class GithubEvent():
     def __init__(self, headers: dict, payload: dict) -> None:
         self._headers = headers
         self._repository_reference = None
-        self._sender = None
+        self._sender_identity: OAuthIdentity = None
         assert isinstance(payload, dict), payload
         try:
             self._raw_data = payload['payload']
@@ -99,13 +99,35 @@ class GithubEvent():
         return self._raw_data['pusher']['name'] if 'pusher' in self._raw_data else None
 
     @property
-    def sender(self) -> OAuthIdentity:
-        if not self._sender:
-            # search user identity
-            identity: OAuthIdentity = self.hosting_service.server_credentials\
-                .find_identity_by_provider_user_id(str(self._raw_data['sender']['id']))
-            self._sender = identity
-        return self._sender
+    def sender_id(self) -> int:
+        return self._raw_data['sender']['id']
+
+    @property
+    def sender_name(self) -> int:
+        return self._raw_data['sender']['name']
+
+    @property
+    def sender_as_user(self) -> User:
+        # initialize sender
+        sender_id = None
+        try:
+            # extract sender id from the payload
+            sender_id = str(self._raw_data['sender']['id'])
+            # search sender identity
+            if not self._sender_identity:
+                # search user identity
+                identity: OAuthIdentity = self.hosting_service.server_credentials\
+                    .find_identity_by_provider_user_id(sender_id)
+                self._sender_identity = identity
+            return self._sender_identity.user
+        except KeyError as e:
+            logger.error("No sender info in the payload associated to the %r github event", self.type)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
+        except OAuthIdentityNotFoundException as e:
+            logger.error("Github identity %r doesn't match with any LifeMonitor user identity", sender_id)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
 
     @property
     def payload(self) -> dict:
