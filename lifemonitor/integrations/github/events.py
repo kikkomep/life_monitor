@@ -310,6 +310,9 @@ class GithubRepositoryReference(object):
     def clone_url(self) -> str:
         return self._raw_data['repository']['clone_url']
 
+    def belongs_to_org(self, org_name: Optional[str] = None) -> bool:
+        return self.owner_type == 'Organization' and (org_name is None or self.owner == org_name)
+
     @property
     def owner(self) -> str:
         return self._raw_data['repository']['owner']['login']
@@ -317,6 +320,10 @@ class GithubRepositoryReference(object):
     @property
     def owner_id(self) -> str:
         return self._raw_data['repository']['owner']['id']
+
+    @property
+    def owner_type(self) -> str:
+        return self._raw_data['repository']['owner']['type']
 
     @property
     def owner_info(self) -> object:
