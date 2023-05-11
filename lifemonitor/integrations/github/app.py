@@ -339,6 +339,10 @@ class LifeMonitorInstallation(Installation.Installation):
     def _requester(self, value: Requester):
         self.__requester = value
 
+    @property
+    def account(self) -> NamedUser:
+        return NamedUser(self._requester, {}, self._rawData["account"], completed=True)
+
     def get_repo(self, full_name_or_id, ref: str = None, rev: str = None, lazy=False) -> InstallationGithubWorkflowRepository:
         assert isinstance(full_name_or_id, (str, int)), full_name_or_id
         url_base = "/repositories/" if isinstance(full_name_or_id, int) else "/repos/"
