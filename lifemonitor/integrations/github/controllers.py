@@ -42,7 +42,6 @@ from lifemonitor.api.models.testsuites.testinstance import TestInstance
 from lifemonitor.api.models.wizards import QuestionStep, UpdateStep
 from lifemonitor.api.models.workflows import WorkflowVersion
 from lifemonitor.auth.models import User
-from lifemonitor.auth.oauth2.client.models import OAuthIdentity
 from lifemonitor.auth.services import authorized, current_user
 from lifemonitor.integrations.github import pull_requests
 from lifemonitor.integrations.github.app import LifeMonitorGithubApp
