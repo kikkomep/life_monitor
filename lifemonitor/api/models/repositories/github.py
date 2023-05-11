@@ -19,6 +19,27 @@
 # SOFTWARE.
 
 from __future__ import annotations
+from .local import ZippedWorkflowRepository
+from .local import LocalGitWorkflowRepository, ZippedWorkflowRepository
+from lifemonitor.utils import (checkout_ref, clone_repo, get_current_ref,
+                               get_git_repo_revision)
+from lifemonitor.exceptions import (EntityNotFoundException,
+                                    IllegalStateException,
+                                    LifeMonitorException)
+from lifemonitor.config import BaseConfig
+from lifemonitor.auth.oauth2.client.models import \
+    OAuthIdentityNotFoundException
+from lifemonitor.auth.models import User
+from lifemonitor.api.models.repositories.local import LocalWorkflowRepository
+from lifemonitor.api.models.repositories.files import (RepositoryFile,
+                                                       WorkflowFile)
+from lifemonitor.api.models.repositories.config import WorkflowRepositoryConfig
+from lifemonitor.api.models.repositories.base import (
+    WorkflowRepository, WorkflowRepositoryMetadata)
+from github.Requester import Requester
+from github.Repository import Repository as GithubRepository
+from github.ContentFile import ContentFile
+import requests
 
 import datetime
 import logging
@@ -30,23 +51,14 @@ from datetime import timedelta
 from typing import Any, Dict, List, Optional, Union
 
 import giturlparse
-import requests
-from github.ContentFile import ContentFile
-from github.Repository import Repository as GithubRepository
-from github.Requester import Requester
+<< << << < HEAD
+== == == =
+>>>>>> > e2f03822(feat(gh model): extend repo with more owner info)
 
-from lifemonitor.api.models.repositories.base import (
-    WorkflowRepository, WorkflowRepositoryMetadata)
-from lifemonitor.api.models.repositories.config import WorkflowRepositoryConfig
-from lifemonitor.api.models.repositories.files import (RepositoryFile,
-                                                       WorkflowFile)
-from lifemonitor.api.models.repositories.local import LocalWorkflowRepository
-from lifemonitor.config import BaseConfig
-from lifemonitor.exceptions import IllegalStateException, LifeMonitorException
-from lifemonitor.utils import (checkout_ref, clone_repo, get_current_ref,
-                               get_git_repo_revision)
 
-from .local import LocalGitWorkflowRepository, ZippedWorkflowRepository
+<< << << < HEAD
+== == == =
+>>>>>> > e2f03822(feat(gh model): extend repo with more owner info)
 
 DEFAULT_BASE_URL = "https://api.github.com"
 DEFAULT_TIMEOUT = 15
@@ -223,6 +235,26 @@ class InstallationGithubWorkflowRepository(GithubRepository, WorkflowRepository)
     @property
     def exclude(self) -> List[str]:
         return self._exclude
+
+    def owner_as_user(self) -> User:
+        try:
+            from lifemonitor.auth.oauth2.client.models import \
+                OAuth2IdentityProvider
+            gh_provider = OAuth2IdentityProvider.find_by_name("github")
+            return gh_provider.find_identity_by_provider_user_id(str(self.owner.id)).user
+        except OAuthIdentityNotFoundException as e:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
+            raise LifeMonitorException(detail="Unable to find the LifeMonitor user which owns the repository")
+        except EntityNotFoundException as e:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
+            raise LifeMonitorException(detail="Unable to find the LifeMonitor user which owns the repository. "
+                                       "GitHub provider not registered in this LifeMonitor instance")
+
+    @property
+    def https_url(self) -> str:
+        return self.html_url
 
     @property
     def _remote_parser(self) -> giturlparse.GitUrlParsed:
