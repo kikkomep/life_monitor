@@ -49,6 +49,7 @@ def create_blueprint(merge_identity_view):
     authorization_handler = AuthorizatonHandler(merge_identity_view)
 
     def _handle_authorize(provider: FlaskRemoteApp, token, user_info):
+        assert user_info is not None
         return authorization_handler\
             .handle_authorize(provider, token, OAuthUserProfile.from_dict(user_info))
 

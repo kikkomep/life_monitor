@@ -290,6 +290,10 @@ class User(db.Model, UserMixin):
     def all(cls):
         return cls.query.all()
 
+    @staticmethod
+    def generate_username(prefix=None):
+        return "{}{}".format(str(prefix), str(_uuid.uuid4())[:8])
+
 
 class ApiKey(db.Model, ModelMixin):
     SCOPES = ["read", "write"]
