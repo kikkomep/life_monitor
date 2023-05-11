@@ -25,26 +25,27 @@ import hmac
 import logging
 import threading
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import jwt
 import requests
-from lifemonitor.api.models.repositories.github import (
-    GithubWorkflowRepository, InstallationGithubWorkflowRepository)
-from lifemonitor.auth.oauth2.client.models import (
-    OAuthIdentity, OAuthIdentityNotFoundException)
-from lifemonitor.exceptions import IllegalStateException, LifeMonitorException
-from lifemonitor.integrations.github.registry import GithubWorkflowRegistry
-
 from github import Github
 from github import GithubIntegration as GithubIntegrationBase
 from github import Installation
 from github.GithubApp import GithubApp
 from github.InstallationAuthorization import InstallationAuthorization
+from github.NamedUser import NamedUser
 from github.PaginatedList import PaginatedList
 from github.Repository import Repository as GithubRepository
 from github.Requester import Requester
 
+from lifemonitor.api.models.repositories.github import (
+    GithubWorkflowRepository, InstallationGithubWorkflowRepository)
+from lifemonitor.auth.models import User
+from lifemonitor.auth.oauth2.client.models import (OAuth2IdentityProvider,
+                                                   OAuthIdentity)
+from lifemonitor.exceptions import IllegalStateException, LifeMonitorException
+from lifemonitor.integrations.github.registry import GithubWorkflowRegistry
 from lifemonitor.integrations.github.utils import CachedGithubRequester
 
 from .config import (DEFAULT_BASE_URL, DEFAULT_PER_PAGE, DEFAULT_TIMEOUT,
@@ -122,6 +123,7 @@ class LifeMonitorGithubApp(GithubApp):
         self.token_expiration = token_expiration
         self.base_url = base_url
         self.service_repository_full_name = service_repository_full_name
+        self._server_credentials: OAuth2IdentityProvider = None
         session = self.app_client_session()
         try:
             app = self._get_app_info(session=session)
@@ -163,6 +165,12 @@ class LifeMonitorGithubApp(GithubApp):
     @property
     def integration(self) -> GithubIntegration:
         return self._integration
+
+    @property
+    def server_credentials(self) -> OAuth2IdentityProvider:
+        if not self._server_credentials:
+            self._server_credentials = OAuth2IdentityProvider.find_by_client_name('github')
+        return self._server_credentials
 
     @property
     def repository_service(self) -> GithubRepository:
@@ -225,6 +233,29 @@ class LifeMonitorGithubApp(GithubApp):
                     return repo
         logger.debug("Installation Repository not found")
         return None
+
+    def register_organization(self, organization: Dict[str, str]) -> User:
+        identity = OAuthIdentity(
+            provider=self.server_credentials,
+            user_info=organization,
+            provider_user_id=organization['id'],
+            token={'scope': 'none'}
+        )
+        logger.warning("Registering organization: %r", organization)
+        identity.user = User(User.generate_username(prefix=f"org_{organization['login']}_"))
+        identity.user.github_settings.enable_integrations = True
+        identity.save()
+        return identity.user
+
+    def get_organization(self, organization_id: str) -> Optional[User]:
+        try:
+            logger.error("Searching organization %r", organization_id)
+            identity = self.server_credentials.find_identity_by_provider_user_id(str(organization_id))
+            return identity.user if identity else None
+        except Exception as e:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
+            return None
 
 
 class GithubIntegration(GithubIntegrationBase):
