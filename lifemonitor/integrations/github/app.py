@@ -356,8 +356,7 @@ class LifeMonitorInstallation(Installation.Installation):
 
     def get_repos(self) -> List[InstallationGithubWorkflowRepository]:
         url_parameters = dict()
-        # TODO: add link to the current installation
-        return PaginatedList(
+        repos = PaginatedList(
             contentClass=InstallationGithubWorkflowRepository,
             requester=self._requester,
             firstUrl="/installation/repositories",
@@ -365,6 +364,10 @@ class LifeMonitorInstallation(Installation.Installation):
             headers=Installation.INTEGRATION_PREVIEW_HEADERS,
             list_item="repositories",
         )
+        # post process the orgiginal list to add the installation
+        for repo in repos:
+            repo.installation = self
+            yield repo
 
     def get_repo_from_event(self, event: object, ignore_errors: bool = False) -> GithubRepository:
         try:
