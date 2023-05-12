@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import List, Optional, Tuple
@@ -27,6 +28,7 @@ from urllib.error import URLError
 from urllib.parse import urlparse
 
 import github
+import requests
 from github import GithubException
 from github import \
     RateLimitExceededException as GithubRateLimitExceededException
@@ -37,8 +39,8 @@ from github.WorkflowRun import WorkflowRun
 
 import lifemonitor.api.models as models
 import lifemonitor.exceptions as lm_exceptions
+from lifemonitor.auth.models import Scope, User
 from lifemonitor.cache import Timeout, cached
-from lifemonitor.auth.models import Scope
 from lifemonitor.integrations.github.utils import (CachedPaginatedList,
                                                    GithubApiWrapper)
 
@@ -436,60 +438,143 @@ class GithubTestingService(TestingService):
     def get_test_build_output(self, test_instance: models.TestInstance, build_number, offset_bytes=0, limit_bytes=131072):
         raise lm_exceptions.NotImplementedException(detail="not supported for GitHub test builds")
 
-    def start_test_build(self, test_instance: models.TestInstance, build_number: int = None) -> bool:
+    def start_test_build(self, test_instance: models.TestInstance, build_number: Optional[str] = None) -> str:
         try:
-            last_build = self.get_last_test_build(test_instance) \
-                if build_number is None else self.get_test_build(test_instance, build_number)
-            assert last_build
-            if last_build:
-                run: WorkflowRun = last_build._metadata
-                assert isinstance(run, WorkflowRun)
-                # set reference to the workflow version
-                workflow_version = test_instance.test_suite.workflow_version
-                # temporary workaround to use the user token
-                import requests
-                user = workflow_version.submitter
-                if not user:
-                    logger.warning("No user found")
-                    return False
-                # detect if the version is based on a GitHub repository
-                _, repo_fullname, _ = self._parse_workflow_url(test_instance.resource)
-                # declare token variable
-                token = None
-                # try to get token from GitHub App
-                try:
-                    from lifemonitor.integrations.github.app import \
-                        LifeMonitorGithubApp
-                    gh_app = LifeMonitorGithubApp.get_instance()
-                    installation = gh_app.get_installation_by_repository(repo_fullname)
-                    if installation:
-                        token = installation.auth.token
-                        logger.debug(f"Token provided by installation {installation.id}")
-                except Exception as e:
-                    logger.exception(e)
+            # get the authorisation token
+            token = self._get_auth_token(test_instance)
+            if token is None:
+                raise lm_exceptions.NotAuthorizedException(
+                    detail="No authorisation token found. "
+                    "In order to start or rerun a test build, "
+                    "you must install the LifeMonitor GitHub App on your workflow repository "
+                    "or have write access to the repository. Furthermore, please note that to start a new test build "
+                    "the workflow must be configured to allow manual dispatches.")
 
-                # if the GitHub App token is not available, try to get the user token
-                if not token:
-                    token = user.github_settings.get_token(SCOPES.REPO_WRITE.name)['access_token']
-
-                # if the token is not available, notify the user
-                if not token:
-                    logger.warning("Unable to find a valid token")
-                else:  # if the token is available, try to schedule a new run
-                    headers = {'Authorization': f"Bearer {token}"}
-                    response = requests.post(run.rerun_url, data={}, headers=headers)
-                    logger.debug(f"Response: {response}")
-                    result = response.status_code in (200, 201, 202)
-                    logger.debug(f"Test build scheduled: {result}")
-                    return result
+            # initialize target workflow run
+            target_workflow_run = None
+            # if no build number is specified, get the last build
+            if build_number is None:
+                last_builds = self._list_workflow_runs(test_instance, limit=1)
+                if last_builds and len(last_builds) > 0:
+                    target_workflow_run = last_builds[0]
+            # otherwise, get the build with the specified number
             else:
-                workflow = self._get_gh_workflow_from_test_instance_resource(test_instance.resource)
-                assert isinstance(workflow, Workflow), workflow
-                return workflow.create_dispatch(test_instance.test_suite.workflow_version.version)
+                # parse build identifier
+                run_id, run_attempt = self._parse_build_identifier(build_number)
+                logger.debug("Searching build: %r %r", run_id, run_attempt)
+                # get a reference to the test instance repository
+                repo: Repository = self._get_repo(test_instance)
+                target_workflow_run = self._get_workflow_run(run_id, repo)
+
+            logger.debug("Detected last build: %r", target_workflow_run)
+            # set request headers
+            headers = {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': f'Bearer {token}'
+            }
+            # if there is a last build, rerun it
+            if target_workflow_run:
+                run: WorkflowRun = target_workflow_run
+                assert isinstance(run, WorkflowRun)
+                # result = run.rerun()
+                result = requests.post(run.rerun_url, data={}, headers=headers)
+                if result.status_code in (200, 201, 202):
+                    return f"{run.id}_{run._rawData['run_attempt']}"
+                logger.error("Unable to rerun build: %r", result.content)
+                if not (result.status_code == 403 and 'Unable to retry this workflow run because it was created over a month ago' in result.content.decode()):
+                    raise lm_exceptions.NotAuthorizedException(
+                        status=result.status_code,
+                        detail=self._process_error_message(result),
+                        detailx="Unable to start a new test build. "
+                        "In order to rerun an existing test build, "
+                        "you must have write access to the repository.",
+                    )
+
+            # otherwise, create a new dispatch event
+            _, repo_fullname, _ = self._parse_workflow_url(test_instance.resource)
+            result = requests.post(
+                f"{self.api_base_url}/repos/{repo_fullname}/actions/workflows/{target_workflow_run.workflow_id}/dispatches",
+                data=json.dumps({
+                    'ref': target_workflow_run.head_branch,
+                }),
+                headers=headers)
+            if result:
+                return f"{result.id}_1"
+            logger.error("Unable to start new build: %r", result.content)
+            lm_exceptions.NotAuthorizedException(
+                status=result.status_code,
+                detail=self._process_error_message(result),
+                detailx="Unable to start a new test build. In order to start a new test build, "
+                "you must have write access to the repository and "
+                "the workflow must be configured to allow manual dispatches.")
         except Exception as e:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.exception(e)
-        return False
+            raise lm_exceptions.LifeMonitorException(detail=str(e))
+        raise lm_exceptions.LifeMonitorException(detail="Unable to start test build")
+
+    @classmethod
+    def _process_error_message(cls, response) -> str:
+        try:
+            return response.json()['message']
+        except Exception:
+            if type(response.content) == bytes:
+                return response.content.decode()
+            return response.content
+
+    def _get_auth_token(self, test_instance: models.TestInstance, user: Optional[User] = None) -> str:
+        # detect if the version is based on a GitHub repository
+        _, repo_fullname, _ = self._parse_workflow_url(test_instance.resource)
+        # declare token variable
+        token = None
+        # try to get token from GitHub App
+        try:
+            from lifemonitor.integrations.github.app import \
+                LifeMonitorGithubApp
+            gh_app = LifeMonitorGithubApp.get_instance()
+            installation = gh_app.get_installation_by_repository(repo_fullname)
+            if installation:
+                token = installation.auth.token
+                logger.debug(f"Token provided by installation {installation.id}")
+        except Exception as e:
+            logger.debug("Unable to get token from GitHub App")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
+
+        # if the GitHub App token is not available, try to get the user token
+        if not token:
+            # if the user is not provided, get the user from the test instance
+            if not user:
+                # temporary workaround to use the user token
+                user = test_instance.test_suite.workflow_version.submitter
+            if not user:
+                raise lm_exceptions.NotAuthorizedException(detail="No authorized user found")
+            try:
+                logger.debug("Getting token with scope %r", SCOPES.REPO_WRITE.name)
+                token = user.github_settings.get_token(SCOPES.REPO_WRITE.name)['access_token']
+                logger.warning("Token provided by user %r", token)
+            except Exception as e:
+                logger.debug("Unable to get token from user")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.exception(e)
+
+        # if the token is not available, notify the user
+        if not token:
+            logger.warning("No token available for user %r", user)
+        return token
+
+    @classmethod
+    def _parse_build_identifier(cls, build_identifier: str) -> Tuple[str, str]:
+        try:
+            result = build_identifier.split('_')
+            if len(result) == 1:
+                return result[0], None
+            elif len(result) == 2:
+                return result[0], result[1]
+            else:
+                raise ValueError()
+        except ValueError:
+            raise lm_exceptions.BadRequestException(detail="Invalid build identifier")
 
     @classmethod
     def _parse_workflow_url(cls, resource: str) -> Tuple[str, str, str]:
