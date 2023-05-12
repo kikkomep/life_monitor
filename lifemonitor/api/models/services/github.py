@@ -368,26 +368,54 @@ class GithubTestingService(TestingService):
     def get_test_build(self, test_instance: models.TestInstance, build_number: int) -> GithubTestBuild:
         try:
             # parse build identifier
-            run_id, run_attempt = build_number.split('_')
+            run_id, run_attempt = self._parse_build_identifier(build_number)
             logger.debug("Searching build: %r %r", run_id, run_attempt)
             # get a reference to the test instance repository
             repo: Repository = self._get_repo(test_instance)
-            headers, data = self._get_test_build(run_id, run_attempt, repo)
-            return GithubTestBuild(self, test_instance, WorkflowRun(repo._requester, headers, data, True))
+            workflow_run = None
+            if run_attempt:
+                try:
+                    workflow_run = self._get_workflow_run_attempt(run_id, run_attempt, repo)
+                except Exception as e:
+                    logger.exception(e)
+                    logger.warning("Unable to retrieve workflow run attempt, trying with workflow run")
+            # if the run attempt is not found, try with the workflow run
+            if workflow_run is None:
+                workflow_run = self._get_workflow_run(run_id, repo)
+            assert workflow_run is not None, "Workflow run not found"
+            return GithubTestBuild(self, test_instance, workflow_run)
         except ValueError as e:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.exception(e)
             raise lm_exceptions.BadRequestException(detail="Invalid build identifier")
 
     @cached(timeout=Timeout.NONE, client_scope=False,
-            force_cache_value=lambda b: b[1]['status'] == GithubTestingService.GithubStatus.COMPLETED)
-    def _get_test_build(self, run_id, run_attempt, repo: Repository) -> GithubTestBuild:
+            force_cache_value=lambda b: b.status == GithubTestingService.GithubStatus.COMPLETED)
+    def _get_workflow_run(self, run_id, repo: Repository) -> WorkflowRun:
+        try:
+            # build url
+            url = f"/repos/{repo.full_name}/actions/runs/{run_id}"
+            logger.debug("Build URL: %s", url)
+            headers, data = repo._requester.requestJsonAndCheck("GET", url)
+            return WorkflowRun(repo._requester, headers, data, True)
+        except ValueError as e:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.exception(e)
+            raise lm_exceptions.BadRequestException(detail="Invalid build identifier")
+        except GithubRateLimitExceededException as e:
+            raise lm_exceptions.RateLimitExceededException(detail=str(e), run_id=run_id)
+        except UnknownObjectException as e:
+            raise lm_exceptions.EntityNotFoundException(models.TestBuild, entity_id=f"{run_id}", detail=str(e))
+
+    @cached(timeout=Timeout.NONE, client_scope=False,
+            force_cache_value=lambda b: b.status == GithubTestingService.GithubStatus.COMPLETED)
+    def _get_workflow_run_attempt(self, run_id, run_attempt, repo: Repository) -> WorkflowRun:
         try:
             # build url
             url = f"/repos/{repo.full_name}/actions/runs/{run_id}/attempts/{run_attempt}"
             logger.debug("Build URL: %s", url)
             headers, data = repo._requester.requestJsonAndCheck("GET", url)
-            return headers, data
+            return WorkflowRun(repo._requester, headers, data, True)
         except ValueError as e:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.exception(e)
