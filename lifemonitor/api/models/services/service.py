@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import uuid as _uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import lifemonitor.exceptions as lm_exceptions
 from lifemonitor.api import models
@@ -183,7 +183,22 @@ class TestingService(db.Model, ModelMixin):
     def get_test_builds(self, test_instance: models.TestInstance, limit: int = 10) -> list:
         raise lm_exceptions.NotImplementedException()
 
-    def start_test_build(self, test_instance: models.TestInstance, build_number: int = None) -> bool:
+    def start_test_build(self, test_instance: models.TestInstance, build_number: Optional[int] = None) -> str:
+        """Starts a new test build for the given test instance.
+        If the build number is not specified, a new build is created and the build number is returned.
+        If the build number is specified, the build is rerun and the build number is returned.
+
+        Args:
+            test_instance (models.TestInstance): the test instance
+            build_number (Optional[str], optional): the build number. Defaults to None.
+
+        Raises:
+            lm_exceptions.EntityNotFoundException: if the build number is specified and the build does not exist
+            lm_exceptions.NotAuthorizedException: if the user is not authorized to start the build
+
+        Returns:
+            str: the build number
+        """
         raise lm_exceptions.NotImplementedException()
 
     def get_test_builds_as_dict(self, test_instance: models.TestInstance, test_output) -> Dict[str, Any]:

@@ -23,7 +23,7 @@ from __future__ import annotations
 import datetime
 import logging
 import uuid as _uuid
-from typing import List
+from typing import List, Optional
 
 import lifemonitor.api.models as models
 from lifemonitor.api.models import db
@@ -108,8 +108,22 @@ class TestInstance(db.Model, ModelMixin):
     def last_test_build(self):
         return self.get_last_test_build()
 
-    def start_test_build(self, build_number: int = None):
-        return self.testing_service.start_test_build(self, build_number=build_number)
+    def start_test_build(self, build_number: Optional[int] = None):
+        """Start a new test build.
+        If the build number is not specified, a new build is created and the build number is returned.
+        If the build number is specified, the build is rerun and the build number is returned.
+
+        Args:
+            build_number (Optional[str], optional): _description_. Defaults to None.
+
+        Raises:
+            lm_exceptions.EntityNotFoundException: if the build number is specified and the build does not exist
+            lm_exceptions.NotAuthorizedException: if the user is not authorized to start the build
+
+        Returns:
+            _type_: _description_
+        """
+        return self.testing_service.start_test_build(self, build_number)
 
     @cached(timeout=Timeout.NONE, client_scope=False, transactional_update=True)
     def get_last_test_build(self):
