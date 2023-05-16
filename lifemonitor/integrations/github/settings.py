@@ -38,6 +38,8 @@ class GithubUserSettings():
     DEFAULTS = {
         "check_issues": True,
         "periodic_builds": True,
+        "periodic_builds_wo_ghapp": False,
+        "periodic_builds_interval": '@weekly',
         "public": True,
         "all_branches": True,
         "all_tags": True,
@@ -85,6 +87,38 @@ class GithubUserSettings():
     def periodic_builds(self, value: bool):
         self._raw_settings['periodic_builds'] = value
         flag_modified(self.user, 'settings')
+
+    @property
+    def periodic_builds_wo_ghapp(self) -> bool:
+        return self._raw_settings.get('periodic_builds_wo_ghapp', self.DEFAULTS['periodic_builds'])
+
+    @periodic_builds_wo_ghapp.setter
+    def periodic_builds_wo_ghapp(self, value: bool):
+        self._raw_settings['periodic_builds_wo_ghapp'] = value
+        flag_modified(self.user, 'settings')
+
+    @property
+    def periodic_builds_interval(self) -> int:
+        return self._raw_settings.get('periodic_builds_interval', self.DEFAULTS['periodic_builds_interval'])
+
+    @periodic_builds_interval.setter
+    def periodic_builds_interval(self, value: int):
+        if not self.is_periodic_builds_interval_valid(value):
+            raise ValueError("Invalid periodic builds interval")
+        self._raw_settings['periodic_builds_interval'] = value
+        flag_modified(self.user, 'settings')
+
+    @staticmethod
+    def is_periodic_builds_interval_valid(value: str) -> bool:
+        import croniter
+        from datetime import datetime
+        try:
+            croniter.croniter(value, datetime.now())
+            return True
+        except Exception as e:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Invalid periodic builds interval: {e}")
+            return False
 
     def get_token(self, label: str) -> Optional[OAuth2Token]:
         try:
