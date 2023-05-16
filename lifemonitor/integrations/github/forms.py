@@ -21,15 +21,16 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
-import json
-
+from flask import session
 from flask_wtf import FlaskForm
-from lifemonitor.auth.models import User
-from wtforms import BooleanField, StringField, HiddenField
-from wtforms.validators import AnyOf
+from wtforms import BooleanField, HiddenField, StringField
+from wtforms.validators import AnyOf, DataRequired, ValidationError
+
 from lifemonitor.api import models
+from lifemonitor.auth.models import User
 
 from .settings import GithubUserSettings
 
@@ -63,6 +64,18 @@ class GithubIntegrationForm(FlaskForm):
         return form
 
 
+def test_validatable_field(form, field):
+    try:
+        field.data = field.data.strip()
+        if field.data:
+            valid = GithubUserSettings.is_periodic_builds_interval_valid(field.data)
+            if not valid:
+                raise ValueError("Invalid periodic builds interval")
+        return True
+    except ValueError as e:
+        raise ValidationError(e)
+
+
 class GithubSettingsForm(FlaskForm):
     branches = StringField(
         "branches",
@@ -93,13 +106,30 @@ class GithubSettingsForm(FlaskForm):
         validators=[AnyOf([True, False])]
     )
 
+    periodic_builds_wo_ghapp = BooleanField(
+        "periodic_builds_wo_ghapp",
+        validators=[AnyOf([True, False])]
+    )
+
+    periodic_builds_interval = StringField(
+        "periodic_builds_interval",
+        validators=[DataRequired(), test_validatable_field],
+        default="@weekly",
+    )
+
     registries = HiddenField(
         "registries",
         description="")
 
     available_registries = models.WorkflowRegistry.all()
 
-    def update_model(self, user: User, skip_periodic_builds: bool = False) -> GithubUserSettings:
+    def invalid_csrf_token(self) -> bool:
+        t = getattr(self, 'csrf_token', None)
+        if t and len(t.errors) > 0:
+            return True
+        return False
+
+    def update_model(self, user: User, skip_periodic_builds_wo_ghapp: bool = False) -> GithubUserSettings:
         assert user and not user.is_anonymous, user
         settings = GithubUserSettings(user) \
             if not user.github_settings else user.github_settings
@@ -107,8 +137,10 @@ class GithubSettingsForm(FlaskForm):
         settings.all_tags = self.all_tags.data
         settings.check_issues = self.check_issues.data
         settings.enable_integration = self.enable_integration.data
-        if not skip_periodic_builds:
-            settings.periodic_builds = self.periodic_builds.data
+        settings.periodic_builds = self.periodic_builds.data
+        if not skip_periodic_builds_wo_ghapp:
+            settings.periodic_builds_wo_ghapp = self.periodic_builds_wo_ghapp.data
+        settings.periodic_builds_interval = self.periodic_builds_interval.data
         settings.branches = [_.strip() for _ in self.branches.data.split(',')] if self.branches.data else []
         settings.tags = [_.strip() for _ in self.tags.data.split(',')] if self.tags.data else []
         logger.error("Settings: %r", settings)
@@ -123,11 +155,17 @@ class GithubSettingsForm(FlaskForm):
             "check_issues": self.check_issues.data,
             "enable_integration": self.enable_integration.data,
             "periodic_builds": self.periodic_builds.data,
-            "registries": self.registries.data
+            "periodic_builds_wo_ghapp": self.periodic_builds_wo_ghapp.data,
+            "periodic_builds_interval": self.periodic_builds_interval.data,
+            "registries": self.registries.data,
+            "csrf_token": self.csrf_token.data,
         }
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict())
+
+    def to_session(self):
+        session['lm-github-settings-form'] = self.to_json()
 
     @classmethod
     def from_json(cls, data: str) -> GithubSettingsForm:
@@ -142,8 +180,13 @@ class GithubSettingsForm(FlaskForm):
         form.tags.data = data.get("tags")
         form.check_issues.data = data.get("check_issues")
         form.periodic_builds.data = data.get("periodic_builds")
+        form.periodic_builds_wo_ghapp.data = data.get("periodic_builds_wo_ghapp")
         form.enable_integration.data = data.get("enable_integration")
         form.registries.data = data.get("registries")
+        form.periodic_builds_interval.data = data.get("periodic_builds_interval")
+        csrf_token = getattr(form, "csrf_token", None)
+        if csrf_token:
+            csrf_token.data = data.get("csrf_token")
         return form
 
     @classmethod
@@ -159,5 +202,18 @@ class GithubSettingsForm(FlaskForm):
         form.tags.data = ', '.join(settings.tags)
         form.check_issues.data = settings.check_issues
         form.periodic_builds.data = settings.periodic_builds
+        form.periodic_builds_wo_ghapp.data = settings.periodic_builds_wo_ghapp
         form.enable_integration.data = settings.enable_integration
+        form.periodic_builds_interval.data = settings.periodic_builds_interval
+        return form
+
+    @classmethod
+    def from_session(cls) -> GithubSettingsForm:
+        data = session.pop("lm-github-settings-form", None)
+        logger.warning("Session data: %r", data)
+        form = None
+        if data:
+            form = cls.from_json(data)
+            if form:
+                form.validate()
         return form
