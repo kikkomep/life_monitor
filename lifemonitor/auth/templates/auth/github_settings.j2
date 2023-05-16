@@ -231,10 +231,10 @@
                     <div class="">
                         {{ macros.render_custom_field(githubSettingsForm.periodic_builds_interval, class="ml-5",
                         disabled=not githubSettingsForm.periodic_builds.data or integration_disabled,
-                        tooltip_on="Time interval between builds in a cron-like format (e.g. 0 0 * * *, @weekly, @daily, etc.)",
+                        tooltip_on="Time interval between builds (e.g. 1 week, 1 day, 1 hour, etc.)",
                         tooltip_off="",tooltipPlacement="bottom", icon_class="fas fa-clock") }}
                         <small class="form-text text-muted my-2 ml-5" style="margin-top: 10px !important;">
-                            Time interval in a cron-like format (e.g. 0 0 * * *, @weekly, @daily, etc.)
+                            Max time interval between builds (e.g. 1 week, 1 day, 1 hour, etc.)
                         </small>
                     </div>
                 </div>
