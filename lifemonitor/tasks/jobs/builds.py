@@ -2,14 +2,17 @@
 import datetime
 import logging
 import time
+from typing import Optional
 
-from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from git import List
+
 from lifemonitor.api.models.notifications import WorkflowStatusNotification
 from lifemonitor.api.models.testsuites.testbuild import BuildStatus, TestBuild
 from lifemonitor.api.serializers import BuildSummarySchema
-from lifemonitor.auth.models import (EventType, Notification)
+from lifemonitor.auth.models import EventType, Notification
 from lifemonitor.cache import Timeout
+from lifemonitor.integrations.github.settings import GithubUserSettings
 from lifemonitor.tasks.scheduler import TASK_EXPIRATION_TIME, schedule
 from lifemonitor.utils import notify_workflow_version_updates
 
@@ -24,6 +27,7 @@ logger.info("Importing task definitions")
           queue_name='builds', options={'max_retries': 3, 'max_age': TASK_EXPIRATION_TIME})
 def check_workflows():
     from flask import current_app
+
     from lifemonitor.api.controllers import workflows_rocrate_download
     from lifemonitor.api.models import Workflow
     from lifemonitor.auth.services import login_user, logout_user
