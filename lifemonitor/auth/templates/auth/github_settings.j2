@@ -107,13 +107,13 @@
                         title="{{ ba_on if githubSettingsForm.all_branches.data else ba_off }}">
                         <input id="all_branches" type="checkbox" name="{{githubSettingsForm.all_branches.name}}"
                             {% if integration_disabled %}disabled{% endif %}
-                            onchange="toggleInputField('{{githubSettingsForm.all_branches.name}}', '{{githubSettingsForm.branches.name}}')"
+                            onchange="toggleInputField('{{githubSettingsForm.all_branches.name}}', '{{githubSettingsForm.branches.name}}', false)"
                             value="{{githubSettingsForm.all_branches.data}}" 
                             data-toggle="toggle" data-on="on"
                             data-off='<i class="fas fa-angle-double-right"></i>' 
                             {% if githubSettingsForm.all_branches.data and not integration_disabled %}checked{% endif %}>
                     </div>
-                    <small class="form-text text-muted my-2 mx-0">
+                    <small class="form-text text-muted my-2 mx-0" style="min-width: 150px;">
                         all branches
                     </small>
                 </div>
@@ -122,7 +122,7 @@
                         {{ macros.render_custom_field(githubSettingsForm.branches, class="ml-5",
                         disabled=githubSettingsForm.all_branches.data or integration_disabled,
                         tooltip_on="List branches separated by comma. Toggle on 'all branches' on the left to enable the
-                        GitHub App on all repository branches",
+                        GitHub App on all repository branches", ondbclick=True,
                         tooltip_off="Double click to edit the list of repository branches",
                         tooltipPlacement="bottom")}}
                     </div>
@@ -149,10 +149,10 @@
                         <input type="checkbox" name="{{githubSettingsForm.all_tags.name}}"
                             {% if integration_disabled %}disabled{% endif %}
                             value="{{githubSettingsForm.all_tags.data}}"
-                            onchange="toggleInputField('{{githubSettingsForm.all_tags.name}}', '{{githubSettingsForm.tags.name}}')"
+                            onchange="toggleInputField('{{githubSettingsForm.all_tags.name}}', '{{githubSettingsForm.tags.name}}', false)"
                             {% if githubSettingsForm.all_tags.data and not integration_disabled%}checked{% endif%} 
                             data-toggle="toggle" data-on="all" data-off='<i class="fas fa-angle-double-right"></i>'>
-                        <small class="form-text text-muted my-2 mx-1">
+                        <small class="form-text text-muted my-2 mx-1" style="min-width: 150px;">
                             all tags
                         </small>
                     </div>
@@ -162,7 +162,7 @@
                         {{ macros.render_custom_field(githubSettingsForm.tags, class="ml-5",
                         disabled=githubSettingsForm.all_tags.data or integration_disabled,
                         tooltip_on="List tags separated by comma. Toggle on 'all tags' on the left to enable the
-                        GitHub App on all repository tags",
+                        GitHub App on all repository tags", ondbclick=True,
                         tooltip_off="Double click to edit the list of repository tags",
                         tooltipPlacement="bottom") }}
                     </div>
@@ -174,7 +174,7 @@
                 <label for="{{githubSettingsForm.check_issues.name}}">Issue Check:</label>
             </div>
             <div class="form-group row">
-                <div class="col-1">
+                <div class="col-2 col-md-1">
                     {% set checks_on = "Toggle off to disable checks on your repositories" %}
                     {% set checks_off = "Toggle on to check for issues on your repositories" %}
                     <div class="checkbox" 
@@ -185,13 +185,13 @@
                         title="{{ checks_on if githubSettingsForm.check_issues.data else checks_off }}">
                         <input type="checkbox" name="{{githubSettingsForm.check_issues.name}}"
                             {% if integration_disabled %}disabled{% endif %}
-                            onchange="toggleInputField('{{githubSettingsForm.check_issues.name}}', '')"
+                            onchange="toggleInputField('{{githubSettingsForm.check_issues.name}}', '', false)"
                             value="{{githubSettingsForm.check_issues.data}}" data-toggle="toggle" {% if
                             githubSettingsForm.check_issues.data and not integration_disabled%}checked{% endif%} 
                             data-on="on" data-off='off'>
                     </div>
                 </div>
-                <div class="col-11 my-auto">
+                <div class="col-10 col-md-11 my-auto">
                     <small class="form-text text-muted px-4">
                         LifeMonitor will check for issues on your repositories
                         and will notify them as Github issues or pull requests
@@ -199,15 +199,20 @@
                 </div>
             </div>
 
-            <!-- Periodic builds --> 
+            <!-- Periodic builds -->
+            <div style="align-items: start; vertical-align: top;">
             <div class="mt-4">
                 <label for="{{githubSettingsForm.periodic_builds.name}}">Periodic Builds:</label>
             </div>
-
+            <small class="form-text text-muted my-2">
+                LifeMonitor will activate periodic builds for your repositories, 
+                ensuring that no more than a certain amount of time passes between one build and the next. 
+                The time interval can be defined by the user through the <b>Build Interval</b> field below.
+            </small>
             <div class="form-group row">
-                <div class="col-1">
-                    {% set periodic_builds_on = "Toggle off to disable periodic builds on your repositories" %}
-                    {% set periodic_builds_off = "Toggle on to enable periodic builds on your repositories" %}
+                <div class="col-2 col-md-1">
+                    {% set periodic_builds_on = "Toggle off to disable periodic builds for your repositories" %}
+                    {% set periodic_builds_off = "Toggle on to enable periodic builds for your repositories" %}
                     <div class="checkbox" 
                         {% if not integration_disabled %}
                         data-toggle="tooltip"
@@ -216,18 +221,48 @@
                         title="{{ periodic_builds_on if githubSettingsForm.periodic_builds.data else periodic_builds_off }}">
                         <input type="checkbox" name="{{githubSettingsForm.periodic_builds.name}}"
                             {% if integration_disabled %}disabled{% endif %}
-                            onchange="toggleInputField('{{githubSettingsForm.periodic_builds.name}}', '')"
+                            onchange="toggleInputField('{{githubSettingsForm.periodic_builds.name}}', '{{githubSettingsForm.periodic_builds_interval.name}}', true, '{{githubSettingsForm.periodic_builds_wo_ghapp.name}}')"
                             value="{{githubSettingsForm.periodic_builds.data}}" data-toggle="toggle" {% if
                             githubSettingsForm.periodic_builds.data and not integration_disabled %}checked{% endif%} 
                             data-on="on" data-off='off'>
                     </div>
                 </div>
-                <div class="col-11 my-auto">
-                    <small class="form-text text-muted px-4">
-                        LifeMonitor will trigger periodic builds on your repositories
-                    </small>
+                <div class="col-10 col-md-6">
+                    <div class="">
+                        {{ macros.render_custom_field(githubSettingsForm.periodic_builds_interval, class="ml-5",
+                        disabled=not githubSettingsForm.periodic_builds.data or integration_disabled,
+                        tooltip_on="Time interval between builds in a cron-like format (e.g. 0 0 * * *, @weekly, @daily, etc.)",
+                        tooltip_off="",tooltipPlacement="bottom", icon_class="fas fa-clock") }}
+                        <small class="form-text text-muted my-2 ml-5" style="margin-top: 10px !important;">
+                            Time interval in a cron-like format (e.g. 0 0 * * *, @weekly, @daily, etc.)
+                        </small>
+                    </div>
+                </div>
+                <div class="col-12 col-md-5 text-right">
+                    {% set checks_on = "Toggle off to disable periodic builds for your repositories w/o GitHub app installed." %}
+                    {% set checks_off = "Toggle on to periodic builds for your repositories w/o GitHub app installed." %}
+                    <div class="checkbox" 
+                        {% if not integration_disabled %}
+                        data-toggle="tooltip" 
+                        data-placement="top" tooltip-on="{{checks_on}}" tooltip-off="{{checks_off}}"
+                        {% endif %}
+                        title="{{ checks_on if githubSettingsForm.periodic_builds_wo_ghapp.data else checks_off }}">
+                        <label class="mx-2" for="{{githubSettingsForm.periodic_builds_wo_ghapp.name}}">w/o GitHub App</label>
+                        <input type="checkbox" name="{{githubSettingsForm.periodic_builds_wo_ghapp.name}}"
+                            {% if integration_disabled or not githubSettingsForm.periodic_builds.data %}disabled{% endif %}
+                            onchange="toggleInputField('{{githubSettingsForm.periodic_builds_wo_ghapp.name}}', '')"
+                            value="{{githubSettingsForm.periodic_builds_wo_ghapp.data}}" data-toggle="toggle" {% if
+                            githubSettingsForm.periodic_builds_wo_ghapp.data and not integration_disabled%}checked{% endif%} 
+                            data-on="on" data-off='off'>                        
+                    </div>                    
+                    <small class="form-text text-muted my-5 my-md-auto" style="margin-top: 10px !important;">
+                        LifeMonitor will activate periodic builds for your repositories
+                        which don't have the GitHub App installed.
+                    </small>            
                 </div>
             </div>
+            </div>
+
 
             <!-- Button to save settings -->
             <div class="form-group pt-5 text-center">
@@ -240,7 +275,7 @@
                 value="{{ githubSettingsForm.enable_integration.data }}">
 
             {{ githubSettingsForm.hidden_tag() }}
-
+            
         </form>
 
     </div>
@@ -253,17 +288,26 @@
 
     var initTriggers = false;
 
-    function toggleInputField(toggleFieldName, dataFieldName) {
+    function toggleInputField(toggleFieldName, dataFieldName, enableDataOnChecked = true, secondaryToggleFieldName = null) {
         var toggleFieldElement = $("input[name=" + toggleFieldName + "]");
         if (!toggleFieldElement) return;
-        var disabled = !toggleFieldElement.prop('checked');
+        var disabled = !(toggleFieldElement.prop('checked'));
         updateFieldTooltip(toggleFieldElement, disabled);
+        // update secondary toggle field element
+        console.log("Secondary:  " + secondaryToggleFieldName);
+        if (secondaryToggleFieldName && disabled) {
+            //toggleInputField(secondaryToggleFieldName, null, null, null);
+            var checkbox = $(`input[name=${secondaryToggleFieldName}]`);
+            console.log(checkbox);
+            checkbox.bootstrapToggle('off');
+        }
         // update data field element
         if (!dataFieldName) return;
         var dataFieldElement = $("input[name=" + dataFieldName + "]");
         if (dataFieldElement) {
-            dataFieldElement.prop("disabled", !disabled).change();
-            updateFieldTooltip(dataFieldElement, !disabled);
+            var dataEnabled = (!enableDataOnChecked || enableDataOnChecked === false) ? disabled : !disabled;
+            dataFieldElement.prop("disabled", !dataEnabled).change();
+            updateFieldTooltip(dataFieldElement, !dataEnabled);
         }
     }
 

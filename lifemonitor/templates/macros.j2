@@ -105,7 +105,7 @@
 {% macro render_custom_field(
           field, value=None, class="", 
           caption=None, disabled=False, onfocusout=False, ondbclick=False,
-          tooltip_on=None, tooltip_off=None, tooltipPlacement='top') -%}
+          tooltip_on=None, tooltip_off=None, tooltipPlacement='top', icon_class=None) -%}
 <div class="form-group mb-2 {{class}}" 
 {% if tooltip_on %} tooltip-on="{{tooltip_on}}" {%endif%} 
 {% if tooltip_off %} tooltip-off="{{tooltip_off}}" {%endif%}
@@ -121,6 +121,7 @@
           class="form-control {% if field.errors %} is-invalid {% endif %}"
           placeholder="{{field.name.capitalize().replace('_', ' ')}}"
           aria-invalid="true" {%if disabled%}disabled{%endif%}>
+    {% if ondbclick %}
     <script>
       var container = document.getElementById("{{field.name}}-container");
       container.addEventListener("dblclick", event => {
@@ -131,9 +132,12 @@
         }
       });      
     </script>
+    {% endif %}
     <div class="input-group-append">
       <div class="input-group-text">
-        {% if field.name == 'username' %}
+        {% if icon_class %}
+        <span class="{{icon_class}}"></span>
+        {% elif field.name == 'username' %}
         <span class="fas fa-user-circle"></span>
         {% elif field.name == 'email' or field.name == 'repeat_email' %}
         <span class="fas fa-envelope"></span>
