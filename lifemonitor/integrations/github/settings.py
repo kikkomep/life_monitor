@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 from __future__ import annotations
+from datetime import timedelta
 
 import logging
 from typing import Any, Dict, List, Optional
@@ -27,7 +28,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from lifemonitor.auth.models import User
 from lifemonitor.auth.oauth2.client.models import OAuth2Token
-from lifemonitor.utils import match_ref
+from lifemonitor.utils import match_ref, parse_datetime_interval
 
 # Config a module level logger
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class GithubUserSettings():
         "check_issues": True,
         "periodic_builds": True,
         "periodic_builds_wo_ghapp": False,
-        "periodic_builds_interval": '@weekly',
+        "periodic_builds_interval": '1 week',
         "public": True,
         "all_branches": True,
         "all_tags": True,
@@ -101,6 +102,10 @@ class GithubUserSettings():
     def periodic_builds_interval(self) -> int:
         return self._raw_settings.get('periodic_builds_interval', self.DEFAULTS['periodic_builds_interval'])
 
+    @property
+    def periodic_builds_interval_as_timedelta(self) -> timedelta:
+        return parse_datetime_interval(self.periodic_builds_interval)
+
     @periodic_builds_interval.setter
     def periodic_builds_interval(self, value: int):
         if not self.is_periodic_builds_interval_valid(value):
@@ -110,10 +115,8 @@ class GithubUserSettings():
 
     @staticmethod
     def is_periodic_builds_interval_valid(value: str) -> bool:
-        import croniter
-        from datetime import datetime
         try:
-            croniter.croniter(value, datetime.now())
+            parse_datetime_interval(value)
             return True
         except Exception as e:
             if logger.isEnabledFor(logging.DEBUG):

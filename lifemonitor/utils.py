@@ -37,7 +37,7 @@ import time
 import urllib
 import uuid
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from importlib import import_module
 from os.path import basename, dirname, isfile, join
 from typing import Dict, List, Literal, Optional, Tuple, Type
@@ -421,6 +421,51 @@ def isoformat_to_datetime(iso: str) -> datetime:
         return datetime.strptime(date_str, date_format)
     except ValueError as e:
         raise ValueError(f"Datetime string {iso} is not in ISO format") from e
+
+
+# Create a table mapping time units to their allowed values
+TIME_UNITS = {
+    'weeks': ['w', 'ww', 'week', 'weeks'],
+    'days': ['d', 'dd', 'day', 'days'],
+    'hours': ['h', 'hh', 'hour', 'hours'],
+    'minutes': ['min', 'minute', 'minute'],
+    'seconds': ['s', 'ss', 'sec', 'secs', 'second', 'seconds']
+}
+
+# Create a lookup table for time units (e.g. 's' -> 'seconds')
+__TIME_UNIT_LOOKUP_TABLE__ = {}
+for key, values in TIME_UNITS.items():
+    for value in values:
+        __TIME_UNIT_LOOKUP_TABLE__[value] = key
+
+__time_units_regex__ = r'(\d+)\s?({})'.format('|'.join([_ for x in TIME_UNITS for _ in [v for v in TIME_UNITS[x]]]))
+
+
+def parse_time_unit(value: str) -> str:
+    try:
+        return __TIME_UNIT_LOOKUP_TABLE__[value]
+    except KeyError:
+        raise ValueError(f"Time unit {value} is not valid")
+
+
+def parse_datetime_interval(interval_string: str) -> timedelta:
+    # Use a regex to find all matches of time units in the interval string
+    matches = re.findall(__time_units_regex__, interval_string)
+    # Calculate the duration of the interval based on the matches found
+    logger.debug("Matches: %r", matches)
+    # If no matches were found, raise an error
+    if len(matches) == 0:
+        raise ValueError(f"Unable to parse interval string {interval_string}")
+    # Otherwise, calculate the duration of the interval
+    delta = timedelta()
+    for match in matches:
+        logger.debug("Checking %r", match)
+        value, unit = match
+        # Use the time_units dictionary to map the abbreviation to its corresponding full string
+        unit_full = parse_time_unit(unit)
+        # Add the interval corresponding to the time unit found to the duration
+        delta += timedelta(**{unit_full: int(value)})
+    return delta
 
 
 def parse_date_interval(interval: str) -> Tuple[Literal['<=', '>=', '<', '>', '..'], Optional[datetime], datetime]:
