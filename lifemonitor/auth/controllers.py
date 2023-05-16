@@ -208,7 +208,7 @@ def profile(form=None, passwordForm=None, currentView=None,
                            enableGithubAppIntegration=boolean_value(current_app.config['ENABLE_GITHUB_INTEGRATION']),
                            enableRegistryIntegration=boolean_value(current_app.config['ENABLE_REGISTRY_INTEGRATION']),
                            oauth2ClientForm=form or Oauth2ClientForm(),
-                           githubSettingsForm=githubSettingsForm or GithubSettingsForm.from_model(current_user),
+                           githubSettingsForm=githubSettingsForm or GithubSettingsForm.from_session() or GithubSettingsForm.from_model(current_user),
                            githubIntegrationForm=githubIntegrationForm or GithubIntegrationForm.from_model(current_user),
                            registrySettingsForm=registrySettingsForm or RegistrySettingsForm.from_model(current_user),
                            providers=get_providers(), currentView=currentView,
@@ -411,24 +411,37 @@ def update_github_settings():
     from lifemonitor.integrations.github.forms import GithubSettingsForm
     # initialize the form
     form = GithubSettingsForm()
+    # set the current form data to the session
+    form.to_session()
 
     # if the request is a POST
     if request.method == "POST":
-        logger.debug("POST request")
+        logger.warning("POST request")
         # validate the form
-        if not form.validate_on_submit():
+        if not form.validate_on_submit():            
+            # notify the user
+            if form.invalid_csrf_token():
+                flash("Invalid request!", category="error")
+            else:
+                flash("Invalid settings!", category="error")
+            # redirect to the profile page
             return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
 
         # check if the periodic builds have been updated
         periodic_builds_updated = current_user.github_settings.periodic_builds != form.periodic_builds.data
         logger.debug("Periodic builds updated: %r", periodic_builds_updated)
 
+        periodic_builds_wo_ghapp_updated = current_user.github_settings.periodic_builds_wo_ghapp != form.periodic_builds_wo_ghapp.data
+        logger.debug("Periodic builds without GHApp updated: %r -> %r",
+                     periodic_builds_wo_ghapp_updated, current_user.github_settings.periodic_builds_wo_ghapp)
+
         # check if issues checkbox has been updated
         issues_updated = current_user.github_settings.check_issues != form.check_issues.data
         logger.debug("Issues updated: %r", issues_updated)
 
         # update the model using the form data
-        form.update_model(current_user)
+        form.update_model(current_user,
+                          skip_periodic_builds_wo_ghapp=periodic_builds_wo_ghapp_updated and not current_user.github_settings.periodic_builds_wo_ghapp)
         # update the model
         current_user.save()
 
@@ -443,27 +456,38 @@ def update_github_settings():
         if periodic_builds_updated:
             if current_user.github_settings.periodic_builds:
                 flash("Periodic builds enabled", category="success")
-                # from lifemonitor.api.models.services.github import SCOPES
-                # uncomment to retrieve the authorization to run builds with the user token
-                # logger.debug("Update authorization required? %r", current_user.github_settings.periodic_builds)
-                # # generate a new nonce as a random number (10 digits)
-                # nonce = random.randint(1000000000, 9999999999)
-                # # store the nonce in the session
-                # session['lm_github_periodic_builds_nonce'] = str(nonce)
-                # # save form data in the session
-                # session['lm_github_periodic_builds_form_data'] = form.to_json()
-                # # redirect to the authorization page
-                # redirect_url = f'/oauth2/login/github?scope={SCOPES.REPO_WRITE.encoded_scopes}&next=/account/enable_periodic_builds?state={nonce}'
-                # logger.warning("Redirecting to %r", redirect_url)
-                # return redirect(redirect_url)
             else:
                 flash("Periodic builds disabled", category="error")
+
+        # notify the user about the periodic builds enabling status
+        if periodic_builds_wo_ghapp_updated:
+            if form.periodic_builds_wo_ghapp.data:
+
+                # flash("Periodic builds w/o GitHub App enabled", category="success")
+                from lifemonitor.api.models.services.github import SCOPES
+                # uncomment to retrieve the authorization to run builds with the user token
+                logger.debug("Update authorization required? %r", current_user.github_settings.periodic_builds_wo_ghapp)
+                # generate a new nonce as a random number (10 digits)
+                nonce = random.randint(1000000000, 9999999999)
+                # store the nonce in the session
+                session['lm_github_periodic_builds_nonce'] = str(nonce)
+                # save form data in the session
+                session['lm_github_periodic_builds_form_data'] = form.to_json()
+                # redirect to the authorization page
+                redirect_url = f'/oauth2/login/github?scope={SCOPES.REPO_WRITE.encoded_scopes}&next=/account/enable_periodic_builds_wo_ghapp?state={nonce}'
+                logger.warning("Redirecting to %r", redirect_url)
+                return redirect(redirect_url)
+
+                # Remove this line: it is just for testing
+                # return redirect(f'/account/enable_periodic_builds_wo_ghapp?state={nonce}')
+            elif not periodic_builds_updated:
+                flash("Periodic builds w/o GitHub App disabled", category="error")
 
     # if the request is different from POST, just render the form
     return redirect(url_for('auth.profile', currentView='githubSettingsTab'))
 
 
-@blueprint.route("/enable_periodic_builds", methods=("GET",))
+@blueprint.route("/enable_periodic_builds_wo_ghapp", methods=("GET",))
 @login_required
 def enable_periodic_builds():
     from lifemonitor.integrations.github.forms import GithubSettingsForm
@@ -492,7 +516,7 @@ def enable_periodic_builds():
                 # update the model using the form data
                 form.update_model(current_user)
                 current_user.save()
-                flash("Periodic builds enabled", category="success")
+                flash("Periodic builds enabled w/o GitHub App", category="success")
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):
             logger.exception(e)
