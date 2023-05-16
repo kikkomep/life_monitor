@@ -38,6 +38,21 @@
       },
       "additionalProperties": false
     },
+    "periodic_builds": {
+      "description": "enable/disable periodic builds",
+      "type": "object",
+      "properties": {
+        "enable": {
+          "description": "enable/disable periodic builds",
+          "type": "boolean",
+          "default": false
+        },
+        "interval": {
+          "description": "interval between builds (e.g., 1 week, 2 days, 3 hours, etc.)",
+          "type": "string"
+        }
+      }
+    },
     "push": {
       "type": "object",
       "minimum": 1,
