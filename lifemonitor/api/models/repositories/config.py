@@ -31,7 +31,7 @@ import yaml
 import lifemonitor.api.models as models
 from lifemonitor.schemas.validators import (ConfigFileValidator,
                                             ValidationResult)
-from lifemonitor.utils import match_ref
+from lifemonitor.utils import match_ref, parse_datetime_interval
 
 from .files import RepositoryFile, TemplateRepositoryFile
 
@@ -143,6 +143,18 @@ class WorkflowRepositoryConfig(RepositoryFile):
 
     def get_ref_settings(self, ref: str) -> Optional[Dict]:
         return self._get_ref_settings(ref, 'branch') or self._get_ref_settings(ref, 'tag') or None
+
+    @property
+    def periodic_builds(self) -> bool:
+        return self._raw_data.get('periodic_builds', False)
+
+    @property
+    def periodic_builds_interval(self) -> str:
+        return self._raw_data.get('periodic_builds_interval', None)
+
+    @property
+    def periodic_builds_interval_as_timedelta(self) -> timedelta:
+        return parse_datetime_interval(self.periodic_builds_interval)
 
     @property
     def registries(self) -> List[models.WorkflowRegistry]:
