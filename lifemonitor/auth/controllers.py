@@ -417,7 +417,7 @@ def update_github_settings():
     if request.method == "POST":
         logger.warning("POST request")
         # validate the form
-        if not form.validate_on_submit():            
+        if not form.validate_on_submit():
             # notify the user
             if form.invalid_csrf_token():
                 flash("Invalid request!", category="error")
