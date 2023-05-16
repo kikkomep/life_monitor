@@ -112,29 +112,96 @@ def check_last_build():
     logger.info("Checking last build: DONE!")
 
 
-@schedule(trigger=CronTrigger(minute=0, hour=2),
-          queue_name='builds', options={'max_retries': 3, 'max_age': TASK_EXPIRATION_TIME})
-def periodic_builds():
+@schedule(trigger=IntervalTrigger(seconds=Timeout.BUILD),
+          queue_name='builds', options={'max_retries': 0, 'max_age': TASK_EXPIRATION_TIME})
+def periodic_builds(workflows_list: Optional[List[str]] = None):
     from lifemonitor.api.models import Workflow
-
-    logger.info("Running 'periodic builds' task...")
-    for w in Workflow.all():
-
+    logger.info("Task 'periodic builds': STARTED!")
+    workflows = [Workflow.all()] if not workflows_list else [Workflow.find_by_uuid(w) for w in workflows_list]
+    updated_workflows = set()
+    for w in workflows:
         for workflow_version in w.versions.values():
+            workflow_updated = False
+
+            periodic_builds_enabled = False
+            periodic_builds_interval: Optional[datetime.timedelta] = None
+
+            # try to get the configuration for the workflow version
+            found_conifg = False
+            try:
+                config = workflow_version.repository.config
+                periodic_builds_enabled = config.periodic_builds
+                periodic_builds_interval = config.periodic_builds_interval_as_timedelta
+                found_conifg = True
+                logger.debug(f"Using repository configuration for the workflow {workflow_version}: {config}")
+            except Exception as e:
+                logger.error(f"Error when getting the configuration for the workflow {workflow_version}: {str(e)}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.exception(e)
+
+            # if the configuration is not available, try to get the user configuration
+            if not found_conifg:
+                try:
+                    config: GithubUserSettings = workflow_version.submitter.github_settings
+                    periodic_builds_enabled = config.periodic_builds
+                    periodic_builds_interval = config.periodic_builds_interval_as_timedelta
+                    logger.debug(f"Using global Github user settings for the workflow {workflow_version}: {config}")
+                except Exception as e:
+                    logger.error(f"Error when getting the user configuration for the workflow {workflow_version}: {str(e)}")
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.exception(e)
+
             for s in workflow_version.test_suites:
                 for i in s.test_instances:
                     try:
-                        last_build: TestBuild = i.last_test_build
-                        if datetime.datetime.fromtimestamp(last_build.timestamp) \
-                                + datetime.timedelta(minutes=1) < datetime.datetime.now():
-                            logger.info("Triggering build of test suite %s on test instance %s for workflow version %s", s, i, workflow_version)
-                            i.start_test_build()
-                            time.sleep(10)
+                        last_build = None
+                        with i.cache.transaction(str(i)):
+                            last_build: TestBuild = i.last_test_build
+                        if not last_build:
+                            logger.warning("No build to rerun")
                         else:
-                            logger.warning("Skipping %s (last build: %s)",
-                                           i, datetime.datetime.fromtimestamp(last_build.timestamp))
+                            # calculate the datetime (in UTC format) of the last run of the last build
+                            last_exec_datetime = datetime.datetime.fromtimestamp(last_build.timestamp)
+
+                            # Summary of the workflow version and periodic builds configuration
+                            logger.debug("Last build: %r", last_build)
+                            logger.debug("Last build status: %r", last_build.status)
+                            logger.debug("Last build timestamp: %r", last_exec_datetime)
+                            logger.debug("Periodic builds enabled: %r", periodic_builds_enabled)
+                            logger.debug("Periodic builds interval: %r", periodic_builds_interval)
+
+                            # check if periodic builds are enabled
+                            if not periodic_builds_enabled:
+                                logger.info("Skipping periodic build of test suite %s on test instance %s for workflow version %s (periodic builds disabled)", s, i, workflow_version)
+                            # if periodic builds are enabled, check if a new build is needed
+                            else:
+                                # set the current time in UTC timezone
+                                current_time = datetime.datetime.utcnow()
+                                logger.warning("Current time: %r", current_time)
+                                # compute the elapsed time since the last build
+                                elapsed_time = current_time - last_exec_datetime
+                                logger.warning("Elapsed time: %r", elapsed_time)
+                                # check if the elapsed time is greater than the periodic builds interval
+                                if elapsed_time <= periodic_builds_interval:
+                                    logger.info("Skipping periodic build of test suite %s on test instance %s for workflow version %s (elapsed time %s)", s, i, workflow_version, elapsed_time)
+                                # if the elapsed time is greater than the periodic builds interval, start a new build
+                                else:
+                                    logger.warning("Triggered periodic build of test suite %s on test instance %s for workflow version %s (elapsed time %s)", s, i, workflow_version, elapsed_time)
+                                    with last_build.cache.transaction(str(last_build)):
+                                        logger.info("Triggering build of test suite %s on test instance %s for workflow version %s", s, i, workflow_version)
+                                        time.sleep(10)
+                                        if i.start_test_build():
+                                            workflow_updated = True
+
                     except Exception as e:
                         logger.error("Error when starting periodic build on test instance %s: %s", i, str(e))
                         if logger.isEnabledFor(logging.DEBUG):
                             logger.exception(e)
-    logger.info("Running 'periodic builds': DONE!")
+
+            if workflow_updated:
+                # save workflow version
+                updated_workflows.add(workflow_version)
+
+    # notify updates to the live clients
+    notify_workflow_version_updates(updated_workflows, type='sync')
+    logger.info("Task 'periodic builds': DONE!")
