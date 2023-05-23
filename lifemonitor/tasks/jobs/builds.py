@@ -62,8 +62,8 @@ def check_workflows():
 
 
 @schedule(trigger=IntervalTrigger(seconds=Timeout.BUILD * 3 / 4),
-          queue_name='builds', options={'max_retries': 3, 'max_age': TASK_EXPIRATION_TIME})
-def check_last_build():
+          queue_name='builds', options={'max_retries': 1, 'max_age': TASK_EXPIRATION_TIME})
+def check_last_build(workflow_uuid: str = None, build_id: str = None, force_check=False):
     from lifemonitor.api.models import Workflow
 
     logger.info("Starting 'check_last build' task...")
