@@ -366,7 +366,7 @@ class LifeMonitorInstallation(Installation.Installation):
         )
         # post process the orgiginal list to add the installation
         for repo in repos:
-            repo.installation = self
+            repo._installation = self
             yield repo
 
     def get_repo_from_event(self, event: object, ignore_errors: bool = False) -> GithubRepository:
