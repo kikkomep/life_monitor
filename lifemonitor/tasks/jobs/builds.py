@@ -67,7 +67,9 @@ def check_last_build():
     from lifemonitor.api.models import Workflow
 
     logger.info("Starting 'check_last build' task...")
-    for w in Workflow.all():
+    workflows = Workflow.all() if not workflow_uuid else [Workflow.find_by_uuid(workflow_uuid)]
+    for w in workflows:
+        logger.debug("Processing workflow: %r -- %r", w.name, w.latest_version.name)
         try:
             for workflow_version in w.versions.values():
                 if workflow_version and len(workflow_version.github_versions) > 0:
@@ -121,7 +123,7 @@ def check_last_build():
 def periodic_builds(workflows_list: Optional[List[str]] = None):
     from lifemonitor.api.models import Workflow
     logger.info("Task 'periodic builds': STARTED!")
-    workflows = [Workflow.all()] if not workflows_list else [Workflow.find_by_uuid(w) for w in workflows_list]
+    workflows = Workflow.all() if not workflows_list else [Workflow.find_by_uuid(w) for w in workflows_list]
     updated_workflows = set()
     for w in workflows:
         for workflow_version in w.versions.values():
