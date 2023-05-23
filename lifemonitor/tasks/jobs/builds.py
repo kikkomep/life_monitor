@@ -157,6 +157,40 @@ def periodic_builds(workflows_list: Optional[List[str]] = None):
                     if logger.isEnabledFor(logging.DEBUG):
                         logger.exception(e)
 
+    logger.info("Running 'periodic builds' task...")
+    for w in Workflow.all():
+
+        for workflow_version in w.versions.values():
+            workflow_updated = False
+
+            periodic_builds_enabled = False
+            periodic_builds_interval: Optional[datetime.timedelta] = None
+
+            # try to get the configuration for the workflow version
+            found_conifg = False
+            try:
+                config = workflow_version.repository.config
+                periodic_builds_enabled = config.periodic_builds
+                periodic_builds_interval = config.periodic_builds_interval_as_timedelta
+                found_conifg = True
+                logger.debug(f"Using repository configuration for the workflow {workflow_version}: {config}")
+            except Exception as e:
+                logger.error(f"Error when getting the configuration for the workflow {workflow_version}: {str(e)}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.exception(e)
+
+            # if the configuration is not available, try to get the user configuration
+            if not found_conifg:
+                try:
+                    config: GithubUserSettings = workflow_version.submitter.github_settings
+                    periodic_builds_enabled = config.periodic_builds
+                    periodic_builds_interval = config.periodic_builds_interval_as_timedelta
+                    logger.debug(f"Using global Github user settings for the workflow {workflow_version}: {config}")
+                except Exception as e:
+                    logger.error(f"Error when getting the user configuration for the workflow {workflow_version}: {str(e)}")
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.exception(e)
+
             for s in workflow_version.test_suites:
                 for i in s.test_instances:
                     try:
