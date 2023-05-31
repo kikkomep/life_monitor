@@ -19,8 +19,8 @@ wait-for-redis.sh
 
 # set DEBUG flag
 DEBUG="${DEBUG:-}"
-FLASK_ENV="${FLASK_ENV:-production}"
-if [[ -z "${DEBUG}" && "${FLASK_ENV}" == "development" ]]; then
+ENV="${ENV:-production}"
+if [[ -z "${DEBUG}" && "${ENV}" == "development" ]]; then
   DEBUG="${DEBUG:-1}"
 fi
 
@@ -46,7 +46,7 @@ if [[ -n "${DEBUG:-}" ]]; then
   log "Debug Mode Enabled"
 fi
 
-if [[ ${FLASK_ENV} == "development" ]]; then
+if [[ ${ENV} == "development" ]]; then
   watch='--watch .'
   log "Worker watching source code directory"
 fi

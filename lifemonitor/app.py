@@ -56,7 +56,7 @@ def create_app(env=None, settings=None, init_app=True, init_integrations=True,
     :return:
     """
     # set app env
-    app_env = env or os.environ.get("FLASK_ENV", "production")
+    app_env = env or os.environ.get("ENV", "production")
     if app_env != 'production':
         # Set the DEBUG_METRICS env var to also enable the
         # prometheus metrics exporter when running in development mode

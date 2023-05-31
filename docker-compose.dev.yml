@@ -8,7 +8,7 @@ services:
   lm:
     user: "${USER_UID}:${USER_GID}"
     environment:
-      - "FLASK_ENV=development"
+      - "ENV=development"
       - "HOME=/lm"
       # Normally, OAuthLib will raise an InsecureTransportError if you attempt to use OAuth2 over HTTP,
       # rather than HTTPS. Setting this environment variable will prevent this error from being raised.
@@ -24,7 +24,7 @@ services:
   init:
     user: "${USER_UID}:${USER_GID}"
     environment:
-      - "FLASK_ENV=development"
+      - "ENV=development"
       # Normally, OAuthLib will raise an InsecureTransportError if you attempt to use OAuth2 over HTTP,
       # rather than HTTPS. Setting this environment variable will prevent this error from being raised.
       # This is mostly useful for local testing, or automated tests. Never set this variable in production.
@@ -36,7 +36,7 @@ services:
   worker:
     user: "${USER_UID}:${USER_GID}"
     environment:
-      - "FLASK_ENV=development"
+      - "ENV=development"
       - "WORKER_PROCESSES=1"
       - "WORKER_THREADS=1"
     volumes:
@@ -46,7 +46,7 @@ services:
   ws_server:
     user: "${USER_UID}:${USER_GID}"
     environment:
-      - "FLASK_ENV=development"
+      - "ENV=development"
     volumes:
       - "./:/lm"
       - "/lm/lifemonitor/static/dist"
@@ -83,7 +83,7 @@ services:
     env_file:
       - settings.conf
     environment:
-      - "FLASK_ENV=development"
+      - "ENV=development"
       - "SMEE_TARGET=https://lm:8000/integrations/github"
       - "NODE_EXTRA_CA_CERTS=/certs/ca.key"
       - "NODE_TLS_REJECT_UNAUTHORIZED=0"
