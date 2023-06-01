@@ -51,7 +51,7 @@ def check_config_properties(settings, flask_app=None):
     logger.debug("App Config: %r", flask_app.config)
 
     for k, v in settings.items():
-        if k == "API_KEYS":
+        if k in ["API_KEYS", "ENV"]:
             continue
         conf_value = str(flask_app.config.get(k, None))
         logger.debug("Checking %s: %s - %s", k, v, conf_value)

@@ -156,7 +156,7 @@ def _get_app_settings(include_env=True, extra=None, env="testing"):
     settings["API_KEYS"] = api_keys
 
     # ensure that the ENV value is properly set (to 'testing' by default)
-    settings['ENV'] = env
+    # settings['ENV'] = env
 
     # return the loaded settings
     return settings
