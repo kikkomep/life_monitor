@@ -83,7 +83,7 @@ def load_proxy_entries(config=None):
 
 
 class BaseConfig:
-    CONFIG_NAME = "base"
+    CONFIG_NAME = ENV = "base"
     SETTINGS_FILE = "settings.conf"
     USE_MOCK_EQUIVALENCY = False
     DEBUG = False
@@ -133,7 +133,7 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
-    CONFIG_NAME = "development"
+    CONFIG_NAME = ENV = "development"
     # Add a random secret (required to enable HTTP sessions)
     SECRET_KEY = os.getenv("DEV_SECRET_KEY", BaseConfig.SECRET_KEY)
     DEBUG = True
@@ -143,14 +143,14 @@ class DevelopmentConfig(BaseConfig):
 
 
 class ProductionConfig(BaseConfig):
-    CONFIG_NAME = "production"
+    CONFIG_NAME = ENV = "production"
     SECRET_KEY = os.getenv("PROD_SECRET_KEY", BaseConfig.SECRET_KEY)
     TESTING = False
     CACHE_TYPE = "flask_caching.backends.rediscache.RedisCache"
 
 
 class TestingConfig(BaseConfig):
-    CONFIG_NAME = "testing"
+    CONFIG_NAME = ENV = "testing"
     SETTINGS_FILE = "tests/settings.conf"
     SECRET_KEY = os.getenv("TEST_SECRET_KEY", BaseConfig.SECRET_KEY)
     DEBUG = True
@@ -165,7 +165,7 @@ class TestingConfig(BaseConfig):
 
 
 class TestingSupportConfig(TestingConfig):
-    CONFIG_NAME = "testingSupport"
+    CONFIG_NAME = ENV = "testingSupport"
     DEBUG = True
     TESTING = False
     LOG_LEVEL = "DEBUG"
@@ -196,23 +196,32 @@ def get_config(settings=None):
 
 def get_config_by_name(name, settings=None):
     try:
-        config = type(f"AppConfigInstance{name}".title(), (_config_by_name[name],), {})
+        config_class_name = f"{name[0].title()}{name[1:]}Config"
+        logger.debug("Config ClassName: %r", config_class_name)
+        config = type(config_class_name, (_config_by_name[name],), {})
+        logger.debug("Config instance: %r", config)
+        logger.debug("ENV in config before: %r", config.ENV)
         # load settings from file
         if settings is None:
             settings = load_settings(config)
-        if settings and "SQLALCHEMY_DATABASE_URI" not in settings:
+        if settings is not None and "SQLALCHEMY_DATABASE_URI" not in settings:
             settings["SQLALCHEMY_DATABASE_URI"] = db_uri(settings=settings)
         # always set the FLASK_APP_CONFIG_FILE variable to the environment
         if settings and "FLASK_APP_CONFIG_FILE" in settings:
             os.environ["FLASK_APP_CONFIG_FILE"] = settings["FLASK_APP_CONFIG_FILE"]
-        # append properties from settings.conf
-        # to the default configuration
+        # append properties from settings.conf to the default configuration
+        logger.debug("ENV in config settings: %r", settings.get('ENV', None))
         if settings:
             for k, v in settings.items():
                 setattr(config, k, v)
+        # ensure that ENV is properly set on the configuration object
+        config.ENV = name
+        # return the configuration object instance
         return config
-    except KeyError:
+    except KeyError as e:
         logger.warning("Unable to load the configuration %s: using 'production'", name)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.error(e)
         return ProductionConfig
 
 
