@@ -126,13 +126,25 @@ def initialize(app_settings, request_context, service_registry: ClassManager):
     os.environ.pop("FLASK_APP_CONFIG_FILE", None)
 
 
-def _get_app_settings(include_env=True, extra=None):
+def _get_app_settings(include_env=True, extra=None, env="testing"):
+    # initialize settings from the environment if specified
     settings = env_settings.copy() if include_env else {}
-    settings.update(helpers.load_settings(app_settings_path))
-    settings.update(helpers.load_settings(tests_settings_path))
+    # logger.debug("default ENV settings: %r", env_settings)
+
+    # load settings from the default configuarion file (i.e., settings.conf)
+    app_settings = helpers.load_settings(app_settings_path)
+    # logger.debug("APP settings: %r", app_settings)
+    settings.update(app_settings)
+
+    # load settings from the tests configuarion file (i.e., tests/settings.conf)
+    tests_settings = helpers.load_settings(tests_settings_path)
+    settings.update(tests_settings)
+    # logger.debug("TESTs settings: %r", tests_settings)
+
+    # load extra settings if provided
     if extra:
         settings.update(extra)
-    # remove API KEYS
+    # remove API KEYS from settings and store them in a separate dictionary
     api_keys = {}
     pattern = re.compile("((\\w+)_API_KEY(_\\w+)?)")
     for k, v in settings.copy().items():
@@ -142,6 +154,11 @@ def _get_app_settings(include_env=True, extra=None):
             settings.pop(k)
             api_keys[k] = v
     settings["API_KEYS"] = api_keys
+
+    # ensure that the ENV value is properly set (to 'testing' by default)
+    settings['ENV'] = env
+
+    # return the loaded settings
     return settings
 
 
