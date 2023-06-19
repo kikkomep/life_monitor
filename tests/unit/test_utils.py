@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 import os
 import tempfile
 
@@ -25,6 +26,9 @@ import pytest
 
 import lifemonitor.exceptions as lm_exceptions
 import lifemonitor.utils as utils
+
+# configure logger
+logger = logging.getLogger(__name__)
 
 
 def test_download_url_404():
@@ -152,3 +156,35 @@ def test_match_ref():
     ('git@repolab.crs4.it:eosc/life_monitor.git', 'https://repolab.crs4.it/eosc/life_monitor.git')])
 def test_ssh_to_https_remote_url(ssh_url, expected_https_url):
     assert utils.convert_ssh_to_https_remote_url(ssh_url) == expected_https_url, "Unexpected git URL"
+
+
+def test_parse_https_git_remote_url():
+    # test with a valid remote URL
+    url = "https://github.com/crs4/life_monitor.git"
+    parsed_url = utils.parse_remote_url(url)
+    assert parsed_url.protocol == "https"
+    assert parsed_url.domain == "github.com"
+    assert parsed_url.platform == "github"
+    assert parsed_url.owner == "crs4"
+    assert parsed_url.repo == "life_monitor"
+
+
+def test_parse_ssh_git_remote_url():
+    # test with a valid remote URL
+    url = "git@github.com:crs4/life_monitor.git"
+    parsed_url = utils.parse_remote_url(url)
+    assert parsed_url.protocol == "ssh"
+    assert parsed_url.domain == "github.com"
+    assert parsed_url.platform == "github"
+    assert parsed_url.owner == "crs4"
+    assert parsed_url.repo == "life_monitor"
+
+
+@pytest.mark.parametrize("url", [
+    "https://server", "https://server/owner", "ssh://server/owner/repo",
+    "git@server:owner", "git@server/owner/repo.git", "git@github.com:owner/repo"])
+def test_parse_invalid_git_remote_url(url):
+    # test with an invalid remote URL
+    logger.debug("Testing with invalid URL: %s" % url)
+    with pytest.raises(ValueError):
+        utils.parse_remote_url(url)
