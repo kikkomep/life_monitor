@@ -258,6 +258,30 @@ def get_last_update(path: str):
     return time.ctime(max(os.stat(root).st_mtime for root, _, _ in os.walk(path)))
 
 
+class GitRepoInfo(giturlparse.GitUrlParsed):
+
+    @property
+    def https_url(self) -> str:
+        if self.protocol == 'ssh':
+            return convert_ssh_to_https_remote_url(self.url)
+        elif self.protocol == 'https':
+            return self.url
+        raise ValueError(f"Invalid protocol: {self.protocol}")
+
+
+def validate_remote_url(url: str) -> bool:
+    return giturlparse.validate(url)
+
+
+def parse_remote_url(url: str) -> GitRepoInfo:
+    result = giturlparse.parse(url)
+    logger.debug(f"Remote URL: {result}")
+    logger.debug(f"Remote valid: {result.valid}")
+    if not result.valid:
+        raise ValueError(f"Invalid remote URL: {url}")
+    return result
+
+
 def convert_ssh_to_https_remote_url(ssh_url):
     # Remove the 'ssh://' prefix
     ssh_url = ssh_url.replace('ssh://', '')
