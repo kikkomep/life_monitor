@@ -45,6 +45,7 @@ from typing import Dict, Iterable, List, Literal, Optional, Tuple, Type
 from urllib.parse import urlparse
 
 import flask
+import giturlparse
 import networkx as nx
 import pygit2
 import requests
