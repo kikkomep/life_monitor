@@ -258,6 +258,22 @@ def get_last_update(path: str):
     return time.ctime(max(os.stat(root).st_mtime for root, _, _ in os.walk(path)))
 
 
+def convert_ssh_to_https_remote_url(ssh_url):
+    # Remove the 'ssh://' prefix
+    ssh_url = ssh_url.replace('ssh://', '')
+
+    # Split the SSH URL into user/host and path
+    user_host, path = ssh_url.split(':')
+
+    # Extract the username from the user/host part
+    _, host = user_host.split('@')
+
+    # Build the HTTPS URL
+    https_url = f'https://{host}/{path}'
+
+    return https_url
+
+
 def match_ref(candidate: str, refs: Iterable[str]) -> Optional[Tuple[str, str]]:
     """
     Checks the patterns in `refs` to see if any elements match the canditate string
