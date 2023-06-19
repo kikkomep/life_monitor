@@ -145,3 +145,10 @@ def test_match_ref():
     assert utils.match_ref('1.0.1', ['*.*.*']) == ('1.0.1', '*.*.*')
     assert utils.match_ref('pippo', ['*.*.*']) is None
     assert utils.match_ref('v1.0.1', ['v*.*.*', '*.*.*']) == ('v1.0.1', 'v*.*.*')
+
+
+@pytest.mark.parametrize("ssh_url,expected_https_url", [
+    ('git@github.com:crs4/life_monitor.git', 'https://github.com/crs4/life_monitor.git'),
+    ('git@repolab.crs4.it:eosc/life_monitor.git', 'https://repolab.crs4.it/eosc/life_monitor.git')])
+def test_ssh_to_https_remote_url(ssh_url, expected_https_url):
+    assert utils.convert_ssh_to_https_remote_url(ssh_url) == expected_https_url, "Unexpected git URL"
