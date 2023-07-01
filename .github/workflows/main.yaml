@@ -82,13 +82,13 @@ jobs:
       - name: Generate certificates
         run: make certs
       # So now you can use Actions' own caching!
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+      # - name: Cache Docker layers
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: /tmp/.buildx-cache
+      #     key: ${{ runner.os }}-buildx-${{ github.sha }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-buildx-
       - name: "Set software version"
         run: |
           git fetch --unshallow
@@ -126,8 +126,8 @@ jobs:
           file: docker/lifemonitor.Dockerfile
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          # cache-from: type=local,src=/tmp/.buildx-cache
+          # cache-to: type=local,dest=/tmp/.buildx-cache-new
           load: true
           build-args: |
             SW_VERSION=${{ env.SOFTWARE_VERSION }}
@@ -183,7 +183,7 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
+          # cache-from: type=local,src=/tmp/.buildx-cache
           build-args: |
             SW_VERSION=${{ env.SOFTWARE_VERSION }}
             BUILD_NUMBER=${{ github.run_number }}
