@@ -132,10 +132,10 @@ jobs:
           build-args: |
             SW_VERSION=${{ env.SOFTWARE_VERSION }}
             BUILD_NUMBER=${{ github.run_number }}
-      - name: Update cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      # - name: Update cache
+      #   run: |
+      #     rm -rf /tmp/.buildx-cache
+      #     mv /tmp/.buildx-cache-new /tmp/.buildx-cache
       # Setup testing environment
       - name: Set up testing environment
         # Tag the latest built image as `crs4/lifemonitor:latest`
