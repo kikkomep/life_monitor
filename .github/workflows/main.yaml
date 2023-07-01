@@ -31,7 +31,7 @@ jobs:
   # Verifies pep8, pyflakes and circular complexity
   flake8:
     name: Lint Python Code (Flake8) (python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    runs-on: neptune
     strategy:
       matrix:
         python-version: ["3.10"]
@@ -50,7 +50,7 @@ jobs:
   # Validate OpenAPI specs
   openapi_specs:
     name: Lint OpenAPI Specs (python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    runs-on: neptune
     strategy:
       matrix:
         python-version: ["3.10"]
@@ -68,7 +68,7 @@ jobs:
 
   build:
     name: "Build, Test and Push Docker Image"
-    runs-on: ubuntu-latest
+    runs-on: neptune
     needs: [flake8, openapi_specs]
     steps:
       - name: "List Docker images"
