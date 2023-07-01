@@ -32,9 +32,9 @@ jobs:
   flake8:
     name: Lint Python Code (Flake8) (python ${{ matrix.python-version }})
     runs-on: neptune
-    strategy:
-      matrix:
-        python-version: ["3.11.2"]
+    # strategy:
+    #   matrix:
+    #     python-version: ["3.11.2"]
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -51,9 +51,9 @@ jobs:
   openapi_specs:
     name: Lint OpenAPI Specs (python ${{ matrix.python-version }})
     runs-on: neptune
-    strategy:
-      matrix:
-        python-version: ["3.11.2"]
+    # strategy:
+    #   matrix:
+    #     python-version: ["3.11.2"]
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
