@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 from __future__ import annotations
+from datetime import timedelta
 
 import itertools as it
 import logging

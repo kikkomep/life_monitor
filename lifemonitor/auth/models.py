@@ -30,7 +30,7 @@ import string
 import urllib
 import uuid as _uuid
 from enum import Enum
-from typing import List, Union
+from typing import List, Optional, Union
 
 from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
 from flask import current_app
