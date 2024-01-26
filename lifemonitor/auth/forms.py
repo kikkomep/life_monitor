@@ -47,6 +47,58 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class MergeAccountsForm(FlaskForm):
+    provider = HiddenField("Provider", validators=[DataRequired()])
+    username = HiddenField(
+        "Username",
+        validators=[DataRequired(), Length(min=3, max=30)]
+    )
+
+    def __init__(self, hidden_properties: List[str], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.provider.validators.append(
+            HiddenFieldValidator(
+                hidden_property_name="provider",
+                hidden_properties=hidden_properties,
+                hidden_property_index=0
+            )
+        )
+        self.username.validators.append(
+            HiddenFieldValidator(
+                hidden_property_name="username",
+                hidden_properties=hidden_properties,
+                hidden_property_index=1
+            )
+        )
+
+
+class HiddenFieldValidator:
+
+    def __init__(self, hidden_property_name: str, hidden_properties: List[str], hidden_property_index):
+        self.hidden_property_name = hidden_property_name
+        self.hidden_property_index = hidden_property_index
+        self.hidden_properties = hidden_properties
+        logger.debug("Hidden property name: %r", self.hidden_property_name)
+        logger.debug("Hidden property index: %r", self.hidden_property_index)
+        logger.debug("Hidden properties comma separated: %r", hidden_properties)
+        logger.debug("Hidden properties: %r", self.hidden_properties)
+
+    def __call__(self, form, field):
+        return self.validate(field.data, self.hidden_properties,
+                             self.hidden_property_index, self.hidden_property_name)
+
+    @classmethod
+    def validate(cls, value: str, hidden_properties: List[str],
+                 hidden_property_index: int, hidden_property_name: str) -> bool:
+        if hidden_property_index < 0:
+            raise ValidationError(f"Invalid hidden property {hidden_property_name}")
+        if hidden_property_index >= len(hidden_properties):
+            raise ValidationError(f"Invalid hidden property {hidden_property_name}")
+        if value != hidden_properties[hidden_property_index]:
+            raise ValidationError("Invalid hidden property")
+        return True
+
+
 class LoginForm(FlaskForm):
     username = StringField(
         "Username", validators=[DataRequired(), Length(min=3, max=30)]

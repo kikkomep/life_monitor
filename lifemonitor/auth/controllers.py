@@ -37,7 +37,7 @@ from .. import exceptions
 from ..utils import (OpenApiSpecs, boolean_value, get_external_server_url,
                      is_service_alive)
 from . import serializers
-from .forms import (EmailForm, LoginForm, NotificationsForm, Oauth2ClientForm,
+from .forms import (EmailForm, LoginForm, MergeAccountsForm, NotificationsForm, Oauth2ClientForm,
                     RegisterForm, SetPasswordForm)
 from .models import db
 from .oauth2.client.services import (get_current_user_identity, get_providers, merge_users,
@@ -515,9 +515,6 @@ def disable_registry_sync():
 @blueprint.route("/merge", methods=("GET", "POST"))
 @login_required
 def merge():
-    # get the username and provider from the request
-    username = request.args.get("username")
-    provider = request.args.get("provider")
 
     # Uncomment to disable the merge feature
     # flash(f"Your <b>{p>rovider}</b> identity is already linked to the username "
@@ -525,35 +522,64 @@ def merge():
     #       category="warning")
     # return redirect(url_for('auth.profile'))
 
-    # Check the authenticity of the identity before merging
-    form = LoginForm(data={
-        "username": username,
-        "provider": provider})
-    if form.validate_on_submit():
-        user = form.get_user()
-        if user:
-            # check if the user is the same as the current user
-            if user == current_user:
-                flash("Cannot merge with yourself", category="warning")
-                form.username.errors.append("Cannot merge with yourself")
-            else:
-                # merge the users
-                resulting_user = merge_users(current_user, user, request.args.get("provider"))
-                logger.debug("User obtained by the merging process: %r", resulting_user)
-                logout_user()
-                # login the resulting user
-                login_user(resulting_user)
-                # redirect to the profile page with a flash message
-                flash(
-                    "User {username} has been merged into your account".format(
-                        username=resulting_user.username
-                    ), category="success"
-                )
-                return profile()
+    logger.debug("Merge request: %r", request.args)
+    merge_info = session.get('merge_accounts', None)
+    logger.debug("Merge info: %r", merge_info)
+    if merge_info:
+        merge_info = merge_info.split(",")
+        provider = merge_info[0]
+        username = merge_info[1]
+    else:
+        flash("Invalid request", category="error")
+        return redirect(url_for('auth.profile'))
+
+    from lifemonitor.auth.models import User
+    user = User.find_by_username(username)
+    logger.debug("Username to merge: %r", user)
+
+    # process the merge request
+    logger.debug("Method: %r", request.method)
+    logger.debug("Request args: %r", request.args)
+    if request.method == "POST":
+        # Check the authenticity of the identity before merging
+        form = MergeAccountsForm(hidden_properties=merge_info)
+        if form.validate_on_submit():
+            logger.error("Getting user from the form")
+            if user:
+                # check if the user is the same as the current user
+                if user == current_user:
+                    flash("Cannot merge with yourself", category="warning")
+                    form.username.errors.append("Cannot merge with yourself")
+                else:
+                    # merge the users
+                    resulting_user = merge_users(current_user, user, request.args.get("provider"))
+                    logger.debug("User obtained by the merging process: %r", resulting_user)
+                    # prepare flash message
+                    flash_message = f"Your <b>{provider}</b> identity has been merged into the username " \
+                                    f"<b>{resulting_user.username}</b>"
+                    logout_user()
+                    # login the resulting user
+                    login_user(resulting_user)
+                    # redirect to the profile page with a flash message
+                    flash(flash_message, category="success")
+                    # remove the merge info from the session
+                    session.pop('merge_accounts', None)
+                    # redirect to the profile page
+                    return profile()
+        else:
+            logger.error("Form validation failed")
+            logger.error("Form errors: %r", form.errors)
+            flash("Invalid request", category="error")
+
     # render the merge page
+    form = MergeAccountsForm(hidden_properties=merge_info,
+                             data={
+                                 "username": username,
+                                 "provider": provider})
     return render_template("auth/merge.j2", form=form, identity={
         "username": username,
-        "provider": provider
+        "provider": provider,
+        "picture": user.picture if user else None
     })
 
 
