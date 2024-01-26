@@ -250,9 +250,8 @@ class AuthorizatonHandler:
                     # accounts are the same!
                     if current_user != identity.user:
                         # Account collision! Ask user if they want to merge accounts.
-                        return redirect(url_for(self.merge_view,
-                                                provider=identity.provider.client_name,
-                                                username=identity.user.username))
+                        session["merge_accounts"] = f"{identity.provider.client_name},{identity.user.username}"
+                        return redirect(url_for(self.merge_view))
                 # If the user is logged in and the token is unlinked or linked yet,
                 # link the token to the current user
                 else:
