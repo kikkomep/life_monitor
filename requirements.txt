@@ -47,7 +47,7 @@ snakemake==6.13.1
 networkx~=3.3
 rich~=13.7.1
 rocrate==0.8.0
-SQLAlchemy==1.4.41
+SQLAlchemy==2.0.32
 wheel~=0.44.0
 Werkzeug~=2.2.3
 repo2rocrate~=0.1.2
