@@ -26,13 +26,17 @@ import psycopg2.sql as sql
 import psycopg2.errors as errors
 from flask import current_app
 from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy.model import Model as BaseModel
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 # set module level logger
 logger = logging.getLogger(__name__)
 
+
+class Model(BaseModel):
+
 # set DB instance
-db = SQLAlchemy()
+db = SQLAlchemy(model_class=Model)
 
 
 def get_db_connection_param(name, settings=None):
