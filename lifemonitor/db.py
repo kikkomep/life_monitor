@@ -34,6 +34,12 @@ logger = logging.getLogger(__name__)
 
 
 class Model(BaseModel):
+    # TODO: fully migrate to SQLAlchemy ORM version 2
+    # To resolve, the classes may be marked with the __allow_unmapped__ boolean attribute
+    # until they can be fully migrated to the 2.0 syntax.
+    # see https://docs.sqlalchemy.org/en/20/errors.html#type-annotation-can-t-be-interpreted-for-annotated-declarative-table-form
+    __allow_unmapped__ = True
+
 
 # set DB instance
 db = SQLAlchemy(model_class=Model)
