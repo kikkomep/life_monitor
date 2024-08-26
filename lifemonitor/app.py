@@ -72,7 +72,12 @@ def create_app(
     # load app config
     app_config = config.get_config_by_name(app_env, settings=settings)
     # set the FlaskApp instance path
+    flask_app_instance_path = None
     flask_app_instance_path = getattr(app_config, "FLASK_APP_INSTANCE_PATH", None)
+    if app_env not in ["testing", "testingSupport"]:
+        flask_app_instance_path = getattr(app_config, "FLASK_APP_INSTANCE_PATH", None)
+    else:
+        logger.warning("App is running in testing mode. FLASK_APP_INSTANCE_PATH will not be set!")
     # create Flask app instance
     app = Flask(__name__, instance_relative_config=True, instance_path=flask_app_instance_path, **kwargs)
     # register handler for app specific exception
