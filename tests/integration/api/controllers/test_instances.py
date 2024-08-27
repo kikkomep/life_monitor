@@ -96,6 +96,7 @@ def test_remove_instance(app_client, client_auth_method,
     assert len(workflow.test_suites) > 0, "Unexpected number of test suites"
     suite = workflow.test_suites[0]
     logger.debug("The test suite: %r", suite)
+    logger.debug("Number of instances: %d", len(suite.test_instances))
     current_number_of_instances = len(suite.test_instances)
     assert current_number_of_instances > 0, "Unexpected number of test instances"
 
@@ -107,8 +108,10 @@ def test_remove_instance(app_client, client_auth_method,
                                 unmanaged_test_instance['service']['type'],
                                 unmanaged_test_instance['service']['url'],
                                 unmanaged_test_instance['resource'])
+        suite.save()
         assert len(suite.test_instances) == current_number_of_instances + i, \
             "Unexpected number of test instances"
+    # test instance removal
     count = 0
     current_number_of_instances += delta
     assert current_number_of_instances > 0, "Unexpected number of test instances"
