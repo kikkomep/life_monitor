@@ -250,6 +250,7 @@ class User(db.Model, UserMixin):
         s = self.get_subscription(resource)
         if not s:
             s = Subscription(resource, self)
+            self.subscriptions.append(s)
         return s
 
     def unsubscribe(self, resource: Resource):
