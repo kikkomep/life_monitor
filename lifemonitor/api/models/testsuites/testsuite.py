@@ -50,9 +50,8 @@ class TestSuite(db.Model, ModelMixin):
                                      cascade="all, delete-orphan")
 
     def __init__(self,
-                 w: models.workflows.WorkflowVersion, submitter: User,
+                 submitter: User,
                  name: str = None, roc_suite: str = None, definition: object = None) -> None:
-        self.workflow_version = w
         self.submitter = submitter
         self.name = name
         self.roc_suite = roc_suite

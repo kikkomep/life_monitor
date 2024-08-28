@@ -307,7 +307,9 @@ class WorkflowVersion(ROCrate):
 
     def add_test_suite(self, submitter: User,
                        name: str = None, roc_suite: str = None, definition: object = None):
-        return models.TestSuite(self, submitter, name=name, roc_suite=roc_suite, definition=definition)
+        s = models.TestSuite(submitter, name=name, roc_suite=roc_suite, definition=definition)
+        self.test_suites.append(s)
+        return s
 
     @property
     def submitter_identity(self):
