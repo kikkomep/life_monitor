@@ -128,10 +128,8 @@ def identify_workflow_version_submitter(repository_reference: GithubRepositoryRe
         identity: OAuthIdentity = repository_reference.event.sender
         submitter = identity.user
         logger.debug("Found a Github identity for the sender %r --> %r, %r", repository_reference.event.sender, identity, submitter)
-    except OAuthIdentityNotFoundException as e:
+    except OAuthIdentityNotFoundException:
         logger.warning("Github identity of the sender '%r' doesn't match with any LifeMonitor user identity", repository_reference.owner_id)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.exception(e)
 
     # fallback the submitter to the original submitter of the workflow
     # (i.e., the user who registered the LifeMonitor Github app on the github repository)
