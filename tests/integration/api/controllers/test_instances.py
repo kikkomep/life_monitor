@@ -121,6 +121,8 @@ def test_remove_instance(app_client, client_auth_method,
                                      headers=user1_auth)
         utils.assert_status_code(204, response.status_code)
         count += 1
+        # refresh the suite and check the number of instances
+        suite.refresh()
         assert len(suite.test_instances) == current_number_of_instances - count
     assert len(suite.test_instances) == 0, "Unexpected number of instances"
 

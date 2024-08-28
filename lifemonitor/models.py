@@ -20,41 +20,58 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
-from typing import List
 from datetime import datetime, timezone
+from typing import List
 
-from sqlalchemy import VARCHAR, types, inspect
+from sqlalchemy import VARCHAR, inspect, types
+from sqlalchemy.exc import SQLAlchemyError
 
 from lifemonitor.cache import CacheMixin
 from lifemonitor.db import db
 
+# set module level logger
+logger = logging.getLogger(__name__)
+
 
 class ModelMixin(CacheMixin):
 
+    @property
+    def session(self):
+        return db.session
+
     def refresh(self, **kwargs):
-        db.session.refresh(self, **kwargs)
+        self.session.refresh(self, **kwargs)
 
     def save(self, commit: bool = True, flush: bool = True, update_modified: bool = True):
         if hasattr(self, 'modified') and update_modified:
             setattr(self, 'modified', datetime.now(tz=timezone.utc))
-        with db.session.begin_nested():
-            db.session.add(self)
-        if commit:
-            db.session.commit()
-        if flush:
-            db.session.flush()
+        try:
+            self.session.add(self)
+            if commit:
+                self.session.commit()
+            if flush:
+                self.session.flush()
+        except SQLAlchemyError as e:
+            # Rollback the transaction
+            self.session.rollback()
+            # Log the error
+            logger.error(f"Error saving {self}: {e}")
+            if logger.isEnabledFor(logging.ERROR):
+                logger.exception(e)
+            # Re-raise the exception
+            raise e
 
     def delete(self, commit: bool = True, flush: bool = True):
-        with db.session.begin_nested():
-            db.session.delete(self)
+        self.session.delete(self)
         if commit:
-            db.session.commit()
+            self.session.commit()
         if flush:
-            db.session.flush()
+            self.session.flush()
 
     def detach(self):
-        db.session.expunge(self)
+        self.session.expunge(self)
 
     @property
     def _object_state(self):
