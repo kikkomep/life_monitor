@@ -206,11 +206,9 @@ class WorkflowVersion(ROCrate):
         'polymorphic_identity': 'workflow_version'
     }
 
-    def __init__(self, workflow: Workflow,
-                 uri, version, submitter: User, uuid=None, name=None) -> None:
+    def __init__(self, uri, version, submitter: User, uuid=None, name=None) -> None:
         super().__init__(uri, uuid=uuid, name=name, version=version)
         self.submitter = submitter
-        self.workflow = workflow
 
     def __repr__(self):
         return '<WorkflowVersion ({}, {}), name: {}, ro_crate link {}>'.format(
