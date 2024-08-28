@@ -80,7 +80,7 @@ def test_instance_not_defined(fake_app_context):
 def test_absolute_path_instance_folder(instance_config_file):
     settings = {"FLASK_APP_INSTANCE_PATH": "a_relative_path"}
     with pytest.raises(ValueError, match=r".*must be absolute.*"):
-        create_app(env="testing", settings=settings, init_app=False)
+        create_app(env="production", settings=settings, init_app=False)
 
 
 @pytest.mark.parametrize("instance_config_file", [("test_config.py", testing_settings)], indirect=True)
@@ -89,7 +89,7 @@ def test_config_instance(instance_config_file):
     instance_file = os.path.basename(instance_config_file)
     settings = {"FLASK_APP_INSTANCE_PATH": instance_path, "FLASK_APP_CONFIG_FILE": instance_file}
     settings.update({"PROPERTY": "_OLD_VALUE_"})  # this should be overwritten from instance_config
-    flask_app = create_app(env="testing", settings=settings, init_app=False)
+    flask_app = create_app(env="production", settings=settings, init_app=False)
     # check if settings from config instance are set
     # and the "PROPERTY" from settings has been overwritten
     check_config_properties(testing_settings, flask_app)
