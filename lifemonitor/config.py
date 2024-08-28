@@ -368,4 +368,4 @@ def configure_logging(app):
     if error:
         app.logger.error("LOG_LEVEL value %s is invalid. Defaulting to INFO", level_str)
 
-    app.logger.info('Logging is active. Log level: %s', logging.getLevelName(app.logger.getEffectiveLevel()))
+    app.logger.info('Logging is active. Log level: %s', app.logger.getEffectiveLevel())
