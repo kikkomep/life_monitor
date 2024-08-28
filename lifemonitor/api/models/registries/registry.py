@@ -127,10 +127,9 @@ class RegistryWorkflowVersion(Resource):
         'polymorphic_identity': 'registry_workflow_version'
     }
 
-    def __init__(self, registry: WorkflowRegistry, workflow_version: models.WorkflowVersion, identifier: str, version: str = None,
+    def __init__(self, workflow_version: models.WorkflowVersion, identifier: str, version: str = None,
                  registry_workflow: RegistryWorkflow = None) -> None:
         super().__init__(self.external_ns, version=version or workflow_version.version)
-        self.registry = registry
         self.identifier = identifier
         self.workflow_version = workflow_version
         self._registry_workflow = registry_workflow
@@ -390,7 +389,9 @@ class WorkflowRegistry(auth_models.HostingService):
 
     def add_workflow_version(self, workflow_version: models.WorkflowVersion, identifier: str, version: str,
                              registry_workflow: RegistryWorkflow = None) -> RegistryWorkflowVersion:
-        return RegistryWorkflowVersion(self, workflow_version, identifier=identifier, version=version, registry_workflow=registry_workflow)
+        v = RegistryWorkflowVersion(workflow_version, identifier=identifier, version=version, registry_workflow=registry_workflow)
+        self.workflow_versions.append(v)
+        return v
 
     def remove_workflow_version(self, workflow_version: models.WorkflowVersion):
         assert isinstance(workflow_version, models.WorkflowVersion), workflow_version
