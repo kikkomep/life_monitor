@@ -73,7 +73,6 @@ def create_app(
     app_config = config.get_config_by_name(app_env, settings=settings)
     # set the FlaskApp instance path
     flask_app_instance_path = None
-    flask_app_instance_path = getattr(app_config, "FLASK_APP_INSTANCE_PATH", None)
     if app_env not in ["testing", "testingSupport"]:
         flask_app_instance_path = getattr(app_config, "FLASK_APP_INSTANCE_PATH", None)
     else:
