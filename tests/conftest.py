@@ -271,7 +271,11 @@ def request_context(app_context, request):
 @pytest.fixture
 def fake_app_context(request):
     try:
-        yield from helpers.app_context(request.param, clean_db=False, init_db=False, drop_db=False)
+        # init reference to the settings
+        settings = request.param if request else {}
+        # always add a fake SQLALCHEMY_DATABASE_URI to the context settings
+        settings.update({"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+        yield from helpers.app_context(settings, clean_db=False, init_db=False, drop_db=False)
     except AttributeError:
         raise RuntimeError("Parametrized fixture. "
                            "You need to provide app settings as dict type in the request param")
