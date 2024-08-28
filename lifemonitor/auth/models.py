@@ -828,14 +828,14 @@ class Permission(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
     resource_id = db.Column(db.Integer, db.ForeignKey('resource.id', ondelete='CASCADE'), primary_key=True)
     roles = db.Column(db.ARRAY(db.String), nullable=True)
-    user = db.relationship("User", back_populates="permissions")
-    resource = db.relationship("Resource", back_populates="permissions")
+    user = db.relationship("User", back_populates="permissions", cascade="save-update")
+    resource = db.relationship("Resource", back_populates="permissions", cascade="save-update")
 
     def __repr__(self):
         return '<Permission of user {} for resource {}: {}>'.format(
             self.user, self.resource, self.roles)
 
-    def __init__(self, user: User = None, resource: Resource = None, roles=None) -> None:
+    def __init__(self, user: User, resource: Resource = None, roles=None) -> None:
         self.user = user
         self.resource = resource
         self.roles = []
