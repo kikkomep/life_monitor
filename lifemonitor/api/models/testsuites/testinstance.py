@@ -65,10 +65,9 @@ class TestInstance(db.Model, ModelMixin):
         'polymorphic_identity': 'unmanaged'
     }
 
-    def __init__(self, testing_suite: TestSuite, submitter: models.User,
+    def __init__(self, submitter: models.User,
                  test_name, test_resource, testing_service: models.TestingService,
                  roc_instance: str = None) -> None:
-        self.test_suite = testing_suite
         self.submitter = submitter
         self.name = test_name
         self.roc_instance = roc_instance
@@ -76,7 +75,7 @@ class TestInstance(db.Model, ModelMixin):
         self.testing_service = testing_service
 
     def __repr__(self):
-        return '<TestInstance {} on TestSuite {}>'.format(self.uuid, self.test_suite.uuid)
+        return '<TestInstance {} on TestSuite {}>'.format(self.uuid, self.test_suite.uuid if self.test_suite else None)
 
     def __eq__(self, o: object) -> bool:
         return isinstance(o, TestInstance) and o.uuid == self.uuid

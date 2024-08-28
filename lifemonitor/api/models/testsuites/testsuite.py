@@ -86,8 +86,9 @@ class TestSuite(db.Model, ModelMixin):
             models.TestingService.get_instance(testing_service_type, testing_service_url)
         assert testing_service, "Testing service not initialized"
         instance_cls = models.TestInstance if not managed else models.ManagedTestInstance
-        test_instance = instance_cls(self, submitter, test_name, testing_service_resource, testing_service, roc_instance)
+        test_instance = instance_cls(submitter, test_name, testing_service_resource, testing_service, roc_instance)
         logger.debug("Created TestInstance: %r", test_instance)
+        self.test_instances.append(test_instance)
         return test_instance
 
     @classmethod
