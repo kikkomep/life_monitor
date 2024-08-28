@@ -98,7 +98,9 @@ class Workflow(Resource):
         return max(self.versions.values(), key=lambda v: v.created)
 
     def add_version(self, version, uri, submitter: User, uuid=None, name=None):
-        return WorkflowVersion(self, uri, version, submitter, uuid=uuid, name=name)
+        v = WorkflowVersion(self, uri, version, submitter, uuid=uuid, name=name)
+        self.versions[version] = v
+        return v
 
     def remove_version(self, version: WorkflowVersion):
         self.versions.remove(version)
