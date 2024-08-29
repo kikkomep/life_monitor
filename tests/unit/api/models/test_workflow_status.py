@@ -35,7 +35,7 @@ def workflow():
     # uri, version, submitter: User,
     # uuid=None, name=None,
     # hosting_service: models.WorkflowRegistry = None
-    return models.WorkflowVersion(MagicMock(), "https://link", "1", MagicMock(),
+    return models.WorkflowVersion("https://link", "1", MagicMock(),
                                   uuid.uuid4(), "Mock workflow version")
 
 
