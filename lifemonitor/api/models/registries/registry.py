@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import requests
 from authlib.integrations.base_client import RemoteApp
@@ -120,20 +120,39 @@ class RegistryWorkflowVersion(Resource):
                                                  backref=db.backref("workflow_versions",
                                                                     cascade="all, delete-orphan"),
                                                  foreign_keys=[registry_id])
+
     external_ns = "external-id:"
+    _uuid = None
     _registry_workflow = None
 
     __mapper_args__ = {
         'polymorphic_identity': 'registry_workflow_version'
     }
 
-    def __init__(self, workflow_version: models.WorkflowVersion, identifier: str, version: str = None,
-                 registry_workflow: RegistryWorkflow = None) -> None:
+    def __init__(self,
+                 registry: WorkflowRegistry,
+                 registry_workflow: RegistryWorkflow,
+                 workflow_version: models.WorkflowVersion, identifier: str, uuid: Optional[str] = None, version: Optional[str] = None) -> None:
         super().__init__(self.external_ns, version=version or workflow_version.version)
         self.identifier = identifier
-        self.workflow_version = workflow_version
+        self.registry = registry
         self._registry_workflow = registry_workflow
-        self.uuid = self.registry_workflow.uuid
+        self.workflow_version = workflow_version
+        # explicitly add the object to the session
+        # because the object is created outside the session
+        # and if the one-to-many relationship is explicitly set
+        # the object is not added to the session
+        self.session.add(self)
+
+    @property
+    def uuid(self) -> str:
+        if not self._uuid:
+            self._uuid = self.registry_workflow.uuid
+        return self._uuid
+
+    @uuid.setter
+    def uuid(self, value):
+        self._uuid = value
 
     @property
     def identifier(self):
@@ -389,7 +408,7 @@ class WorkflowRegistry(auth_models.HostingService):
 
     def add_workflow_version(self, workflow_version: models.WorkflowVersion, identifier: str, version: str,
                              registry_workflow: RegistryWorkflow = None) -> RegistryWorkflowVersion:
-        v = RegistryWorkflowVersion(workflow_version, identifier=identifier, version=version, registry_workflow=registry_workflow)
+        v = RegistryWorkflowVersion(self, registry_workflow, workflow_version, identifier=identifier, version=version)
         self.workflow_versions.append(v)
         return v
 
