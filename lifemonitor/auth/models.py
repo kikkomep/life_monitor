@@ -36,15 +36,17 @@ from authlib.integrations.sqla_oauth2 import OAuth2TokenMixin
 from flask import current_app
 from flask_bcrypt import check_password_hash, generate_password_hash
 from flask_login import AnonymousUserMixin, UserMixin
-from lifemonitor import exceptions as lm_exceptions
-from lifemonitor import utils as lm_utils
-from lifemonitor.db import db
-from lifemonitor.models import JSON, UUID, IntegerSet, ModelMixin
 from sqlalchemy import null
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.mutable import MutableSet
+from sqlalchemy.orm import Mapped
 from sqlalchemy.orm.exc import NoResultFound
+
+from lifemonitor import exceptions as lm_exceptions
+from lifemonitor import utils as lm_utils
+from lifemonitor.db import db
+from lifemonitor.models import JSON, UUID, IntegerSet, ModelMixin
 
 # Set the module level logger
 logger = logging.getLogger(__name__)
@@ -75,14 +77,16 @@ class User(db.Model, UserMixin):
     _email_verified = db.Column("email_verified", db.Boolean, nullable=True, default=False)
     permissions = db.relationship("Permission", back_populates="user",
                                   cascade="all, delete-orphan")
-    authorizations = db.relationship("ExternalServiceAccessAuthorization",
+    authorizations = db.relationship("ExternalServiceAccessAuthorization", back_populates="user",
                                      cascade="all, delete-orphan")
 
     subscriptions = db.relationship("Subscription", cascade="all, delete-orphan")
 
-    notifications: List[UserNotification] = db.relationship("UserNotification",
-                                                            back_populates="user",
-                                                            cascade="all, delete-orphan")
+    user_notifications: Mapped[List["UserNotification"]] = db.relationship(back_populates="user",
+                                                                           cascade="all, delete-orphan")
+
+    notifications = association_proxy('user_notifications', 'notification')
+
     settings = db.Column("settings", JSON, nullable=False)
 
     def __init__(self, username=None) -> None:
@@ -215,7 +219,7 @@ class User(db.Model, UserMixin):
         return True
 
     def get_user_notification(self, notification_uuid: str) -> UserNotification:
-        return next((n for n in self.notifications if str(n.notification.uuid) == notification_uuid), None)
+        return next((n for n in self.user_notifications if str(n.notification.uuid) == notification_uuid), None)
 
     def get_notification(self, notification_uuid: str) -> Notification:
         user_notification = self.get_user_notification(notification_uuid)
@@ -231,7 +235,7 @@ class User(db.Model, UserMixin):
             user_notification = n
         if n is None:
             raise ValueError("notification cannot be None")
-        self.notifications.remove(user_notification)
+        self.user_notifications.remove(user_notification)
         logger.debug("User notification %r removed", user_notification)
 
     def has_permission(self, resource: Resource) -> bool:
@@ -508,8 +512,9 @@ class Notification(db.Model, ModelMixin):
     _data = db.Column("data", JSON, nullable=True)
     _type = db.Column("type", db.String, nullable=False)
 
-    users: List[UserNotification] = db.relationship("UserNotification",
-                                                    back_populates="notification", cascade="all, delete-orphan")
+    user_notifications: Mapped[List["UserNotification"]] = db.relationship(back_populates="notification", cascade="all, delete-orphan")
+
+    users = association_proxy('user_notifications', 'user')
 
     __mapper_args__ = {
         'polymorphic_on': _type,
@@ -538,11 +543,14 @@ class Notification(db.Model, ModelMixin):
     def data(self) -> object:
         return self._data
 
-    def add_user(self, user: User):
-        if user and user not in self.users:
-            UserNotification(user, self)
+    def add_user(self, user: User) -> UserNotification:
+        if user and (not self.user_notifications or user not in self.user_notifications):
+            un = UserNotification()
+            un.user = user
+            un.notification = self
 
     def remove_user(self, user: User):
+        assert user, "User cannot be None"
         self.users.remove(user)
 
     def to_mail_message(self, recipients: List[User]) -> str:
@@ -612,18 +620,14 @@ class UserNotification(db.Model):
 
     notification_id = db.Column(db.Integer, db.ForeignKey("notification.id"), nullable=False, primary_key=True)
 
-    user: User = db.relationship("User", uselist=False,
-                                 back_populates="notifications", foreign_keys=[user_id],
-                                 cascade="save-update")
+    user: Mapped["User"] = db.relationship("User",
+                                           back_populates="user_notifications", foreign_keys=[user_id],
+                                           cascade="save-update")
 
-    notification: Notification = db.relationship("Notification", uselist=False,
-                                                 back_populates="users",
-                                                 foreign_keys=[notification_id],
-                                                 cascade="save-update")
-
-    def __init__(self, user: User, notification: Notification) -> None:
-        self.user = user
-        self.notification = notification
+    notification: Mapped["Notification"] = db.relationship("Notification",
+                                                           back_populates="user_notifications",
+                                                           foreign_keys=[notification_id],
+                                                           cascade="save-update")
 
     def save(self):
         db.session.add(self)
