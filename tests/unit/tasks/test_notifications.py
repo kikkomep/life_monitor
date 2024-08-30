@@ -53,7 +53,7 @@ def test_unconfigured_email_notification(mail, app_settings, app_context, user1)
     assert len(notifications) == 1, "Unexpected number of notifications"
 
     n: Notification = notifications[0]
-    un: UserNotification = next((_.user for _ in n.users if _.user_id == user.id), None)
+    un: UserNotification = next((_.user for _ in n.user_notifications if _.user_id == user.id), None)
     assert un is not None, "User1 should be notified"
 
     # no additional notification should be generated

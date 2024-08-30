@@ -710,7 +710,7 @@ class LifeMonitor:
             logger.debug("Search result notification %r ...", n)
             if n is None:
                 return lm_exceptions.EntityNotFoundException(Notification, entity_id=notitification_uuid)
-            user.notifications.remove(n)
+            user.user_notifications.remove(n)
             user.save()
 
     @staticmethod
@@ -721,7 +721,7 @@ class LifeMonitor:
             logger.debug("Search result notification %r ...", n)
             if n is None:
                 return lm_exceptions.EntityNotFoundException(Notification, entity_id=n_uuid)
-            user.notifications.remove(n)
+            user.user_notifications.remove(n)
         user.save()
 
     @staticmethod

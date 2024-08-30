@@ -76,7 +76,7 @@ def send_notification(n: Notification, recipients: List[str] = None) -> Optional
             logger.debug("Mail recipients for notification '%r': %r", n.id, recipients)
             if not recipients:
                 recipients = [
-                    u.user.email for u in n.users
+                    u.user.email for u in n.user_notifications
                     if u.emailed is None and u.user.email_notifications_enabled and u.user.email
                 ]
             if len(recipients) > 0:

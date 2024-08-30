@@ -24,7 +24,7 @@ import logging
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from lifemonitor.auth.models import (Notification,
-                                     UnconfiguredEmailNotification, User)
+                                     UnconfiguredEmailNotification, User, UserNotification)
 from lifemonitor.mail import send_notification
 from lifemonitor.tasks.scheduler import TASK_EXPIRATION_TIME, schedule
 
@@ -45,14 +45,14 @@ def send_email_notifications():
     for n in notifications:
         logger.debug("Processing notification %r ...", n)
         recipients = [
-            u.user.email for u in n.users
+            u.user.email for u in n.user_notifications
             if u.emailed is None and u.user.email_notifications_enabled and u.user.email
         ]
         sent = send_notification(n, recipients=recipients)
         logger.debug("Notification email sent: %r", sent is not None)
         if sent:
             logger.debug("Notification '%r' sent by email @ %r", n.id, sent)
-            for u in n.users:
+            for u in n.user_notifications:
                 if u.user.email in recipients:
                     u.emailed = sent
             n.save()

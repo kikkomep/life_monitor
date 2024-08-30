@@ -113,8 +113,8 @@ def merge_users(merge_from: User, merge_into: User, provider: str = None):
                 db.session.add(auth)
 
             # move all the notification of the user "merge_from" to the user "merge_into"
-            merge_into_notification_ids = [un.notification.id for un in merge_into.notifications]
-            for user_notification in list(merge_from.notifications):
+            merge_into_notification_ids = [un.notification.id for un in merge_into.user_notifications]
+            for user_notification in list(merge_from.user_notifications):
                 if user_notification.notification.id not in merge_into_notification_ids:
                     user_notification.user = merge_into
                     db.session.add(user_notification)
