@@ -870,6 +870,7 @@ class ExternalServiceAccessAuthorization(db.Model):
     def __init__(self, user) -> None:
         super().__init__()
         self.user = user
+        db.session.add(self)
 
     def as_http_header(self):
         return ""
