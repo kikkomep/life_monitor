@@ -24,7 +24,7 @@ import logging
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from lifemonitor.auth.models import (Notification,
-                                     UnconfiguredEmailNotification, User, UserNotification)
+                                     UnconfiguredEmailNotification, User)
 from lifemonitor.mail import send_notification
 from lifemonitor.tasks.scheduler import TASK_EXPIRATION_TIME, schedule
 
